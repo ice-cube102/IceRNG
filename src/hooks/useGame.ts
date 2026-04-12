@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { RARITIES, Rarity } from '@/src/constants/rarities';
 
 export type AmuletType = 'Bronze' | 'Silver' | 'Gold' | 'Diamond' | 'Supreme';
-export type PassiveType = 'Jackpot Rush' | 'Coin Shower' | 'EXP Power' | 'Machine Learning' | 'Standard Deviation' | 'Burning Dice';
+export type PassiveType = '잭팟 러시' | '코인 샤워' | '경험치 파워' | '머신 러닝' | '표준 편차' | '버닝 다이스';
 
 export interface AmuletStat {
   type: 'coin' | 'speed' | 'jackpotProb' | 'jackpotPower' | 'exp';
@@ -93,7 +93,7 @@ export const QUICK_PULSE_PRICES = [10, 100, 1000, 10000, 100000];
 
 export function useGame() {
   const [state, setState] = useState<GameState>(() => {
-    const saved = localStorage.getItem('rng-game-state-v11');
+    const saved = localStorage.getItem('rng-game-state-v12');
     if (saved) return JSON.parse(saved);
     return INITIAL_STATE;
   });
@@ -105,7 +105,7 @@ export function useGame() {
   const isRollingRef = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem('rng-game-state-v11', JSON.stringify(state));
+    localStorage.setItem('rng-game-state-v12', JSON.stringify(state));
   }, [state]);
 
   // Calculate active amulet stats
@@ -127,19 +127,19 @@ export function useGame() {
       if (s.type === 'exp') amuletExp += s.value;
     });
     state.amulet.passives.forEach(p => {
-      if (p.type === 'Machine Learning') hasMachineLearning = true;
-      if (p.type === 'Jackpot Rush') {
+      if (p.type === '머신 러닝') hasMachineLearning = true;
+      if (p.type === '잭팟 러시') {
         amuletJackpotProb += p.value1;
         amuletJackpotPower += p.value2;
       }
-      if (p.type === 'Coin Shower') {
+      if (p.type === '코인 샤워') {
         amuletCoin *= p.value1;
       }
-      if (p.type === 'EXP Power') {
+      if (p.type === '경험치 파워') {
         amuletExp *= p.value1;
         amuletLuck *= p.value2;
       }
-      if (p.type === 'Burning Dice') {
+      if (p.type === '버닝 다이스') {
         amuletSpeed -= p.value1;
       }
     });
@@ -228,9 +228,9 @@ export function useGame() {
       }
 
       // Base Jackpot: 1% prob, 200% (2.0) power
-      const jackpotProb = 0.01 + (state.jackpotProbLevel * 0.01) + amuletJackpotProb + buffJackpotProb;
+      const jackpotProb = Math.min(0.8, 0.01 + (state.jackpotProbLevel * 0.01) + amuletJackpotProb + buffJackpotProb);
       const isJackpot = Math.random() < jackpotProb;
-      const jackpotPower = 2.0 + (state.jackpotPowerLevel * 0.1) + amuletJackpotPower + buffJackpotPower;
+      const jackpotPower = Math.min(5.0, 2.0 + (state.jackpotPowerLevel * 0.1) + amuletJackpotPower + buffJackpotPower);
       
       // Jackpot applies Jackpot Power / 2 as Luck Multiplier
       const jackpotLuckBonus = isJackpot ? (jackpotPower / 2) : 1;
@@ -302,7 +302,7 @@ export function useGame() {
           newJackpotCount++;
         }
 
-        if (prev.amulet?.passives.some(p => p.type === 'Burning Dice') && Math.random() < 0.5) {
+        if (prev.amulet?.passives.some(p => p.type === '버닝 다이스') && Math.random() < 0.5) {
           buffAuraAmount *= 2;
         }
 
@@ -379,6 +379,14 @@ export function useGame() {
     }
   }, [hasMachineLearning]);
 
+  const resetGame = useCallback(() => {
+    if (window.confirm('정말로 모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      setState(INITIAL_STATE);
+      localStorage.removeItem('rng-game-state-v11');
+      window.location.reload();
+    }
+  }, []);
+
   const equipAura = useCallback((auraName: string) => {
     setState(prev => ({ ...prev, equippedAura: auraName }));
   }, []);
@@ -417,8 +425,10 @@ export function useGame() {
           if (prev.quickPulseCount >= 5) return prev;
           return { ...prev, coins: prev.coins - cost, quickPulseCount: prev.quickPulseCount + 1 };
         } else if (type === 'jackpotProb') {
+          if (prev.jackpotProbLevel >= 79) return prev; // 1% base + 79% upgrade = 80%
           return { ...prev, coins: prev.coins - cost, jackpotProbLevel: prev.jackpotProbLevel + count };
         } else if (type === 'jackpotPower') {
+          if (prev.jackpotPowerLevel >= 30) return prev; // 200% base + 300% upgrade = 500%
           return { ...prev, coins: prev.coins - cost, jackpotPowerLevel: prev.jackpotPowerLevel + count };
         } else if (type === 'synthesizer') {
           return { ...prev, coins: prev.coins - cost, synthesizerUnlocked: true };
@@ -465,16 +475,16 @@ export function useGame() {
       luckMultiplier = 2.5;
       numStats = Math.random() < 0.7 ? 3 : 4;
       
-      const passivePool: PassiveType[] = ['Jackpot Rush', 'Coin Shower', 'EXP Power', 'Machine Learning', 'Standard Deviation', 'Burning Dice'];
+      const passivePool: PassiveType[] = ['잭팟 러시', '코인 샤워', '경험치 파워', '머신 러닝', '표준 편차', '버닝 다이스'];
       
       const getPassive = (pType: PassiveType): AmuletPassive => {
         switch(pType) {
-          case 'Jackpot Rush': return { type: pType, value1: 0.05, value2: 0.5 };
-          case 'Coin Shower': return { type: pType, value1: 1.5, value2: 0 };
-          case 'EXP Power': return { type: pType, value1: 2, value2: 1.2 };
-          case 'Machine Learning': return { type: pType, value1: 0, value2: 0 };
-          case 'Standard Deviation': return { type: pType, value1: 0, value2: 0 };
-          case 'Burning Dice': return { type: pType, value1: 0.1, value2: 2 };
+          case '잭팟 러시': return { type: pType, value1: 0.05, value2: 0.5 };
+          case '코인 샤워': return { type: pType, value1: 1.5, value2: 0 };
+          case '경험치 파워': return { type: pType, value1: 2, value2: 1.2 };
+          case '머신 러닝': return { type: pType, value1: 0, value2: 0 };
+          case '표준 편차': return { type: pType, value1: 0, value2: 0 };
+          case '버닝 다이스': return { type: pType, value1: 0.1, value2: 2 };
         }
       };
 
@@ -550,6 +560,7 @@ export function useGame() {
     setAmulet,
     payCoins,
     toggleAutoRoll,
+    resetGame,
     hasMachineLearning,
     amuletStats: {
       luck: amuletLuck,

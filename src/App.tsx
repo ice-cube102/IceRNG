@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame, Amulet, AmuletType, AmuletPassive, AmuletStat, QUICK_PULSE_PRICES } from './hooks/useGame';
 import { RARITIES } from './constants/rarities';
-import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle, Circle, Square, Triangle, Hexagon, Sun, Globe, Moon, Infinity as InfinityIcon, Cloud, Eye, Crown } from 'lucide-react';
+import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle, Circle, Square, Triangle, Hexagon, Sun, Globe, Moon, Infinity as InfinityIcon, Cloud, Eye, Crown, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -45,12 +45,12 @@ const formatAmuletStat = (stat: AmuletStat) => {
 };
 
 const formatPassiveDesc = (p: AmuletPassive) => {
-  if (p.type === 'Jackpot Rush') return `상시 잭팟 확률 +5%, 잭팟 파워 +50%`;
-  if (p.type === 'Coin Shower') return `상시 코인 획득량 x1.5`;
-  if (p.type === 'EXP Power') return `상시 경험치 획득량 x2, 행운 x1.2`;
-  if (p.type === 'Machine Learning') return `오토 뽑기 기능 잠금 해제`;
-  if (p.type === 'Standard Deviation') return `매 뽑기마다 48% 확률로 행운 x0.99, 52% 확률로 행운 x1.01`;
-  if (p.type === 'Burning Dice') return `상시 속도 -10%, 뽑기 시 50% 확률로 아우라 획득 개수 x2`;
+  if (p.type === '잭팟 러시') return `상시 잭팟 확률 +5%, 잭팟 파워 +50%`;
+  if (p.type === '코인 샤워') return `상시 코인 획득량 x1.5`;
+  if (p.type === '경험치 파워') return `상시 경험치 획득량 x2, 행운 x1.2`;
+  if (p.type === '머신 러닝') return `오토 뽑기 기능 잠금 해제`;
+  if (p.type === '표준 편차') return `매 뽑기마다 48% 확률로 행운 x0.99, 52% 확률로 행운 x1.01`;
+  if (p.type === '버닝 다이스') return `상시 속도 -10%, 뽑기 시 50% 확률로 아우라 획득 개수 x2`;
   return '';
 };
 
@@ -101,6 +101,7 @@ export default function App() {
     setAmulet,
     payCoins,
     toggleAutoRoll,
+    resetGame,
     hasMachineLearning,
     amuletStats,
     buffStats
@@ -274,6 +275,15 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={resetGame}
+              className="text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+              title="데이터 초기화"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
             <div className="flex flex-col items-end">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-bold text-slate-400">Lv.{state.level}</span>
