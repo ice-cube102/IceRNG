@@ -461,7 +461,7 @@ export function useGame() {
       } else if (r < 0.01) {
         passives.push({ type: 'Coin Shower', value1: 2 + Math.random() * 2, value2: 0.05 + Math.random() * 0.15 });
       }
-    } else if (type === 'Supreme') {
+    } else if (type === 'Supreme' || type === 'GrandSupreme') {
       luckMultiplier = 2.5;
       numStats = Math.random() < 0.7 ? 3 : 4;
       
@@ -481,7 +481,7 @@ export function useGame() {
       const firstPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
       passives.push(getPassive(firstPassive));
 
-      if (forceDoublePassive || Math.random() < 0.05) {
+      if (type === 'GrandSupreme' || forceDoublePassive || Math.random() < 0.05) {
         let secondPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
         while (secondPassive === firstPassive) {
           secondPassive = passivePool[Math.floor(Math.random() * passivePool.length)];

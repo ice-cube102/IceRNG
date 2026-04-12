@@ -584,6 +584,10 @@ export default function App() {
                       <span className="font-bold text-xs">슈프림 뽑기</span>
                       <span className="text-[10px]">500,000</span>
                     </Button>
+                    <Button variant="outline" className="bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/20 flex flex-col h-auto py-2" onClick={() => handleBuyAmulet('GrandSupreme', 50000000, true)}>
+                      <span className="font-bold text-xs">그랜드 슈프림</span>
+                      <span className="text-[10px]">50,000,000</span>
+                    </Button>
                   </div>
                   <CardContent className="p-4 flex-1 overflow-y-auto">
                     <h3 className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-widest">현재 장착된 아뮬렛</h3>
