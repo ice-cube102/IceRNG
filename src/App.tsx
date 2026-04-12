@@ -40,12 +40,12 @@ const formatAmuletStat = (stat: AmuletStat) => {
 };
 
 const formatPassiveDesc = (p: AmuletPassive) => {
-  if (p.type === 'Jackpot Rush') return `잭팟 15번 달성 시 60초간 잭팟 확률 +${(p.value1*100).toFixed(1)}%, 잭팟 파워 +${(p.value2*100).toFixed(0)}% (버프 중 잭팟 시 효과 강화)`;
-  if (p.type === 'Coin Shower') return `50번 뽑기 시 60초간 코인 x${p.value1.toFixed(1)}, 속도 -${(p.value2*100).toFixed(1)}% (버프 중 코인 획득 시 효과 강화)`;
-  if (p.type === 'EXP Power') return `레벨업 시 60초간 경험치 x${p.value1.toFixed(1)}, 행운 x${p.value2.toFixed(1)} (종료 시 경험 블레싱 스택 지급)`;
+  if (p.type === 'Jackpot Rush') return `잭팟 15번 달성 시 60초간 잭팟 확률 +5%~, 잭팟 파워 +50%~ (버프 중 잭팟 시 효과 강화)`;
+  if (p.type === 'Coin Shower') return `50번 뽑기 시 60초간 코인 x2~, 속도 -5%~ (버프 중 코인 획득 시 효과 강화)`;
+  if (p.type === 'EXP Power') return `레벨업 시 60초간 경험치 x2~, 행운 x2~ (종료 시 경험 블레싱 스택 지급)`;
   if (p.type === 'Machine Learning') return `오토 뽑기 기능 잠금 해제`;
   if (p.type === 'Standard Deviation') return `매 뽑기마다 48% 확률로 행운 x0.99, 52% 확률로 행운 x1.01`;
-  if (p.type === 'Burning Dice') return `뽑기 시 2% 확률로 60초간 속도 -${(p.value1*100).toFixed(0)}%, 아우라 획득 x${p.value2}. 종료 시 [재의 저주] 획득`;
+  if (p.type === 'Burning Dice') return `뽑기 시 2% 확률로 60초간 속도 -5~15%, 아우라 획득 x2~4. 돌리는 횟수가 늘어날 때마다 버프 증가. 종료 시 [재의 저주] 획득`;
   return '';
 };
 
@@ -103,7 +103,6 @@ export default function App() {
 
   const [cloverAmount, setCloverAmount] = useState(1);
   const [pendingAmulet, setPendingAmulet] = useState<Amulet | null>(null);
-  const [showSupremeConfirm, setShowSupremeConfirm] = useState(false);
 
   const handleUpgrade = (cost: number, type: any, value: number, name: string, count: number = 1) => {
     if (buyUpgrade(cost, type, value, count)) {
@@ -113,14 +112,10 @@ export default function App() {
     }
   };
 
-  const handleBuyAmulet = (type: AmuletType, cost: number, forceDoublePassive: boolean = false) => {
-    if (type === 'Supreme' && !forceDoublePassive && state.coins >= 5000000) {
-      setShowSupremeConfirm(true);
-      return;
-    }
+  const handleBuyAmulet = (type: AmuletType, cost: number) => {
     if (state.coins >= cost) {
       if (payCoins(cost)) {
-        const newAmulet = generateAmulet(type, forceDoublePassive);
+        const newAmulet = generateAmulet(type);
         setPendingAmulet(newAmulet);
       }
     } else {
@@ -141,14 +136,21 @@ export default function App() {
   const totalJackpotProb = 1 + (state.jackpotProbLevel * 1) + (amuletStats.jackpotProb * 100) + (buffStats.jackpotProb * 100);
   const totalJackpotPower = 200 + (state.jackpotPowerLevel * 10) + (amuletStats.jackpotPower * 100) + (buffStats.jackpotPower * 100);
 
-  const jackpotLuckBonus = state.lastRollStatus?.isJackpot ? ((2.0 + (state.jackpotPowerLevel * 0.1) + amuletStats.jackpotPower + buffStats.jackpotPower) * 0.5) : 1;
+  const jackpotLuckBonus = state.lastRollStatus?.isJackpot ? ((2.0 + (state.jackpotPowerLevel * 0.1) + amuletStats.jackpotPower + buffStats.jackpotPower) / 2) : 1;
   const totalLuck = state.luck * amuletStats.luck * buffStats.luckMult * state.stdDevMultiplier * jackpotLuckBonus;
 
   const rarestAuraObj = RARITIES.find(r => r.name === state.rarestAura) || RARITIES[0];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-jua selection:bg-cyan-900 selection:text-cyan-50">
-      <Toaster theme="dark" position="top-center" />
+      <Toaster 
+        theme="dark" 
+        position="bottom-right" 
+        toastOptions={{ 
+          duration: 1500,
+          className: 'bg-green-600 text-white border-green-700 font-jua'
+        }} 
+      />
       
       {/* Amulet Replacement Modal */}
       <AnimatePresence>
@@ -192,53 +194,6 @@ export default function App() {
           </motion.div>
         )}
 
-        {showSupremeConfirm && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-900 border border-red-900/50 p-6 rounded-3xl max-w-md w-full shadow-[0_0_40px_rgba(220,38,38,0.2)]"
-            >
-              <div className="flex items-center justify-center mb-4">
-                <AlertCircle className="w-12 h-12 text-red-500" />
-              </div>
-              <h2 className="text-2xl font-black text-white mb-2 text-center tracking-tight">슈프림 더블 추천!</h2>
-              <p className="text-slate-300 text-center mb-8">
-                코인이 충분합니다! 5,000,000 코인을 사용하여 패시브 2개가 100% 확정으로 등장하는 <span className="text-red-400 font-bold">슈프림 더블</span>을 뽑으시겠습니까?
-              </p>
-              <div className="flex gap-4">
-                <Button className="flex-1 py-6 bg-slate-800 hover:bg-slate-700 text-white font-bold text-lg rounded-xl" onClick={() => {
-                  setShowSupremeConfirm(false);
-                  if (payCoins(500000)) {
-                    const newAmulet = generateAmulet('Supreme', false);
-                    setPendingAmulet(newAmulet);
-                  } else {
-                    toast.error("코인이 부족합니다.");
-                  }
-                }}>
-                  아니오 (일반 뽑기)
-                </Button>
-                <Button className="flex-1 py-6 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.4)]" onClick={() => {
-                  setShowSupremeConfirm(false);
-                  if (payCoins(5000000)) {
-                    const newAmulet = generateAmulet('Supreme', true);
-                    setPendingAmulet(newAmulet);
-                  } else {
-                    toast.error("코인이 부족합니다.");
-                  }
-                }}>
-                  네 (슈프림 더블)
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -259,7 +214,7 @@ export default function App() {
               <p className="text-xs font-medium text-cyan-400 tracking-widest uppercase">운을 시험해보세요</p>
               
               {/* Buffs Display */}
-              {state.activeBuffs.length > 0 && (
+              {(state.activeBuffs.length > 0 || Object.entries(state.passiveCooldowns).some(([_, cd]) => cd > Date.now())) && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {state.activeBuffs.map((buff, idx) => {
                     const isDebuff = buff.type === 'Curse of Ash' || buff.type === 'Burning';
@@ -271,6 +226,16 @@ export default function App() {
                         {buff.type} 
                         {buff.stacks ? ` (${buff.stacks})` : ''}
                         <span className="ml-1 opacity-70">{Math.ceil((buff.expiry - Date.now()) / 1000)}s</span>
+                      </Badge>
+                    );
+                  })}
+                  {Object.entries(state.passiveCooldowns).map(([type, cd], idx) => {
+                    if (cd <= Date.now()) return null;
+                    return (
+                      <Badge key={`cd-${idx}`} variant="outline" className="bg-slate-800/50 border-slate-700 text-slate-400 py-0.5 px-2 text-[10px]">
+                        <Timer className="w-3 h-3 mr-1" />
+                        {type} CD
+                        <span className="ml-1 opacity-70">{Math.ceil((cd - Date.now()) / 1000)}s</span>
                       </Badge>
                     );
                   })}
@@ -559,58 +524,66 @@ export default function App() {
                       <CardDescription>같은 아우라 5개를 모아 다음 등급으로 합성합니다.</CardDescription>
                     </div>
                     <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
-                      <ScrollArea className="flex-1">
-                        <div className="p-4 space-y-2">
-                          {RARITIES.slice(0, -1).map((rarity, idx) => {
-                            const count = state.inventory[rarity.name] || 0;
-                            const nextRarity = RARITIES[idx + 1];
-                            if (count === 0) return null;
-                            
-                            return (
-                              <div key={rarity.name} className="flex flex-col gap-2 p-4 rounded-2xl border bg-slate-900/40 border-slate-800/50">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    {getIcon(rarity.icon, `w-5 h-5 ${rarity.color}`)}
-                                    <span className={`font-bold ${rarity.color}`}>{rarity.name}</span>
-                                    <span className="text-slate-400 text-xs">x{count.toLocaleString()}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Button 
-                                      size="sm"
-                                      disabled={count < 5} 
-                                      onClick={() => {
-                                        if (synthesize(idx)) toast.success(`${nextRarity.name} 합성 성공!`);
-                                      }}
-                                      className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
-                                    >
-                                      합성 (5개)
-                                    </Button>
-                                    <Button 
-                                      size="sm"
-                                      disabled={count < 5} 
-                                      onClick={() => {
-                                        if (synthesize(idx, true)) toast.success(`${nextRarity.name} 최대 합성 성공!`);
-                                      }}
-                                      className="bg-purple-900/50 hover:bg-purple-800 text-purple-300 text-xs font-bold"
-                                    >
-                                      최대 합성
-                                    </Button>
-                                  </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                        {RARITIES.slice(0, -1).map((rarity, idx) => {
+                          const count = state.inventory[rarity.name] || 0;
+                          const nextRarity = RARITIES[idx + 1];
+                          if (count === 0) return null;
+                          
+                          return (
+                            <div key={rarity.name} className="flex flex-col gap-2 p-4 rounded-2xl border bg-slate-900/40 border-slate-800/50">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  {getIcon(rarity.icon, `w-5 h-5 ${rarity.color}`)}
+                                  <span className={`font-bold ${rarity.color}`}>{rarity.name}</span>
+                                  <span className="text-slate-400 text-xs">x{count.toLocaleString()}</span>
                                 </div>
-                                <div className="text-xs text-slate-500 text-right">
-                                  결과: <span className={nextRarity.color}>{nextRarity.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <Button 
+                                    size="sm"
+                                    disabled={count < 5} 
+                                    onClick={() => {
+                                      if (synthesize(idx)) toast.success(
+                                        <div className="flex items-center gap-2">
+                                          {getIcon(nextRarity.icon, `w-4 h-4 ${nextRarity.color}`)}
+                                          <span>{nextRarity.name} 합성 성공!</span>
+                                        </div>
+                                      );
+                                    }}
+                                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
+                                  >
+                                    합성 (5개)
+                                  </Button>
+                                  <Button 
+                                    size="sm"
+                                    disabled={count < 5} 
+                                    onClick={() => {
+                                      if (synthesize(idx, true)) toast.success(
+                                        <div className="flex items-center gap-2">
+                                          {getIcon(nextRarity.icon, `w-4 h-4 ${nextRarity.color}`)}
+                                          <span>{nextRarity.name} 최대 합성 성공!</span>
+                                        </div>
+                                      );
+                                    }}
+                                    className="bg-purple-900/50 hover:bg-purple-800 text-purple-300 text-xs font-bold"
+                                  >
+                                    최대 합성
+                                  </Button>
                                 </div>
                               </div>
-                            );
-                          })}
-                          {Object.keys(state.inventory).length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-32 text-slate-600">
-                              <Zap className="w-12 h-12 mb-4 opacity-10" />
-                              <p className="text-sm font-medium">합성할 아우라가 없습니다</p>
+                              <div className="text-xs text-slate-500 flex items-center justify-end gap-1">
+                                결과: {getIcon(nextRarity.icon, `w-3 h-3 ${nextRarity.color}`)} <span className={nextRarity.color}>{nextRarity.name}</span>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </ScrollArea>
+                          );
+                        })}
+                        {Object.keys(state.inventory).length === 0 && (
+                          <div className="flex flex-col items-center justify-center py-32 text-slate-600">
+                            <Zap className="w-12 h-12 mb-4 opacity-10" />
+                            <p className="text-sm font-medium">합성할 아우라가 없습니다</p>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
