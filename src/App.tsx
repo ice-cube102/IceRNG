@@ -108,7 +108,6 @@ export default function App() {
 
   const [cloverAmount, setCloverAmount] = useState(1);
   const [pendingAmulet, setPendingAmulet] = useState<Amulet | null>(null);
-  const [showSupremeConfirm, setShowSupremeConfirm] = useState(false);
 
   const handleUpgrade = (cost: number, type: any, value: number, name: string, count: number = 1) => {
     if (buyUpgrade(cost, type, value, count)) {
@@ -118,14 +117,10 @@ export default function App() {
     }
   };
 
-  const handleBuyAmulet = (type: AmuletType, cost: number, forceDoublePassive: boolean = false) => {
-    if (type === 'Supreme' && !forceDoublePassive) {
-      setShowSupremeConfirm(true);
-      return;
-    }
+  const handleBuyAmulet = (type: AmuletType, cost: number) => {
     if (state.coins >= cost) {
       if (payCoins(cost)) {
-        const newAmulet = generateAmulet(type, forceDoublePassive);
+        const newAmulet = generateAmulet(type);
         setPendingAmulet(newAmulet);
       }
     } else {
@@ -162,72 +157,6 @@ export default function App() {
         }} 
       />
       
-      {/* Supreme Confirm Modal */}
-      <AnimatePresence>
-        {showSupremeConfirm && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl text-center"
-            >
-              <h2 className="text-2xl font-black text-purple-400 mb-4 tracking-tight">슈프림 아뮬렛 구매</h2>
-              <p className="text-slate-300 mb-6 text-sm">
-                일반 슈프림 아뮬렛을 구매하시겠습니까?<br/>
-                <span className="text-yellow-400 font-bold">50,000,000 코인</span>으로 패시브 2개가 확정인 <span className="text-purple-400 font-bold">슈프림 더블</span>을 구매할 수도 있습니다!
-              </p>
-              <div className="flex flex-col gap-3">
-                <Button 
-                  onClick={() => {
-                    setShowSupremeConfirm(false);
-                    if (state.coins >= 500000) {
-                      if (payCoins(500000)) {
-                        const newAmulet = generateAmulet('Supreme', false);
-                        setPendingAmulet(newAmulet);
-                      }
-                    } else {
-                      toast.error("코인이 부족합니다.");
-                    }
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white"
-                >
-                  일반 슈프림 구매 (500,000 코인)
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setShowSupremeConfirm(false);
-                    if (state.coins >= 50000000) {
-                      if (payCoins(50000000)) {
-                        const newAmulet = generateAmulet('Supreme', true);
-                        setPendingAmulet(newAmulet);
-                      }
-                    } else {
-                      toast.error("코인이 부족합니다.");
-                    }
-                  }}
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-[0_0_15px_rgba(147,51,234,0.5)]"
-                >
-                  슈프림 더블 구매 (50,000,000 코인)
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setShowSupremeConfirm(false)}
-                  className="w-full text-slate-400 hover:text-white mt-2"
-                >
-                  취소
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Amulet Replacement Modal */}
       <AnimatePresence>
         {pendingAmulet && (
@@ -580,11 +509,11 @@ export default function App() {
                       <span className="font-bold text-xs">다이아 뽑기</span>
                       <span className="text-[10px]">100,000</span>
                     </Button>
-                    <Button variant="outline" className="bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 flex flex-col h-auto py-2" onClick={() => handleBuyAmulet('Supreme', 500000, false)}>
+                    <Button variant="outline" className="bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 flex flex-col h-auto py-2" onClick={() => handleBuyAmulet('Supreme', 500000)}>
                       <span className="font-bold text-xs">슈프림 뽑기</span>
                       <span className="text-[10px]">500,000</span>
                     </Button>
-                    <Button variant="outline" className="bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/20 flex flex-col h-auto py-2" onClick={() => handleBuyAmulet('GrandSupreme', 50000000, true)}>
+                    <Button variant="outline" className="bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/20 flex flex-col h-auto py-2" onClick={() => handleBuyAmulet('GrandSupreme', 50000000)}>
                       <span className="font-bold text-xs">그랜드 슈프림</span>
                       <span className="text-[10px]">50,000,000</span>
                     </Button>

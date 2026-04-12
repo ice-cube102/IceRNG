@@ -430,7 +430,7 @@ export function useGame() {
     return false;
   }, [state.coins]);
 
-  const generateAmulet = useCallback((type: AmuletType, forceDoublePassive: boolean = false): Amulet => {
+  const generateAmulet = useCallback((type: AmuletType): Amulet => {
     const id = Math.random().toString(36).substr(2, 9);
     let luckMultiplier = 1;
     let numStats = 0;
@@ -481,7 +481,7 @@ export function useGame() {
       const firstPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
       passives.push(getPassive(firstPassive));
 
-      if (type === 'GrandSupreme' || forceDoublePassive || Math.random() < 0.05) {
+      if (type === 'GrandSupreme') {
         let secondPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
         while (secondPassive === firstPassive) {
           secondPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
