@@ -91,12 +91,57 @@ export const RARITIES: Rarity[] = [
     icon: "Moon"
   },
   {
+    name: "Dimensional",
+    chance: 50000000,
+    color: "text-teal-400",
+    glowColor: "shadow-teal-400/90",
+    description: "차원의 경계를 허무는 신비로운 기운입니다.",
+    coinValue: 600000000,
+    icon: "Cloud"
+  },
+  {
+    name: "Ethereal",
+    chance: 250000000,
+    color: "text-emerald-400",
+    glowColor: "shadow-emerald-400/90",
+    description: "형체를 알 수 없는 영적인 에너지입니다.",
+    coinValue: 3500000000,
+    icon: "Eye"
+  },
+  {
+    name: "Omniscient",
+    chance: 1000000000,
+    color: "text-rose-500",
+    glowColor: "shadow-rose-500/90",
+    description: "모든 것을 꿰뚫어 보는 전지전능한 아우라입니다.",
+    coinValue: 15000000000,
+    icon: "Sparkles"
+  },
+  {
+    name: "Singularity",
+    chance: 5000000000,
+    color: "text-fuchsia-500",
+    glowColor: "shadow-fuchsia-500/100",
+    description: "시공간이 붕괴되는 특이점의 폭발입니다.",
+    coinValue: 80000000000,
+    icon: "Zap"
+  },
+  {
+    name: "Transcendent",
+    chance: 25000000000,
+    color: "text-amber-500",
+    glowColor: "shadow-amber-500/100",
+    description: "필멸의 한계를 초월한 절대자의 기운입니다.",
+    coinValue: 500000000000,
+    icon: "Crown"
+  },
+  {
     name: "Infinite",
-    chance: 100000000,
+    chance: 100000000000,
     color: "text-white",
     glowColor: "shadow-white/100",
     description: "무한한 가능성. 우주의 진리 그 자체입니다.",
-    coinValue: 2000000000,
+    coinValue: 2500000000000,
     icon: "Infinity"
   }
 ];

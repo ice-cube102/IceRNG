@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame, Amulet, AmuletType, AmuletPassive, AmuletStat, QUICK_PULSE_PRICES } from './hooks/useGame';
 import { RARITIES } from './constants/rarities';
-import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle, Circle, Square, Triangle, Hexagon, Sun, Globe, Moon, Infinity as InfinityIcon } from 'lucide-react';
+import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle, Circle, Square, Triangle, Hexagon, Sun, Globe, Moon, Infinity as InfinityIcon, Cloud, Eye, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -21,6 +21,11 @@ const ICON_MAP: Record<string, any> = {
   Sun,
   Globe,
   Moon,
+  Cloud,
+  Eye,
+  Sparkles,
+  Zap,
+  Crown,
   Infinity: InfinityIcon
 };
 
@@ -40,12 +45,12 @@ const formatAmuletStat = (stat: AmuletStat) => {
 };
 
 const formatPassiveDesc = (p: AmuletPassive) => {
-  if (p.type === 'Jackpot Rush') return `잭팟 15번 달성 시 60초간 잭팟 확률 +5%~, 잭팟 파워 +50%~ (버프 중 잭팟 시 효과 강화)`;
-  if (p.type === 'Coin Shower') return `50번 뽑기 시 60초간 코인 x2~, 속도 -5%~ (버프 중 코인 획득 시 효과 강화)`;
-  if (p.type === 'EXP Power') return `레벨업 시 60초간 경험치 x2~, 행운 x2~ (종료 시 경험 블레싱 스택 지급)`;
+  if (p.type === 'Jackpot Rush') return `상시 잭팟 확률 +5%, 잭팟 파워 +50%`;
+  if (p.type === 'Coin Shower') return `상시 코인 획득량 x1.5`;
+  if (p.type === 'EXP Power') return `상시 경험치 획득량 x2, 행운 x1.2`;
   if (p.type === 'Machine Learning') return `오토 뽑기 기능 잠금 해제`;
   if (p.type === 'Standard Deviation') return `매 뽑기마다 48% 확률로 행운 x0.99, 52% 확률로 행운 x1.01`;
-  if (p.type === 'Burning Dice') return `뽑기 시 2% 확률로 60초간 속도 -5~15%, 아우라 획득 x2~4. 돌리는 횟수가 늘어날 때마다 버프 증가. 종료 시 [재의 저주] 획득`;
+  if (p.type === 'Burning Dice') return `상시 속도 -10%, 뽑기 시 50% 확률로 아우라 획득 개수 x2`;
   return '';
 };
 
@@ -103,6 +108,7 @@ export default function App() {
 
   const [cloverAmount, setCloverAmount] = useState(1);
   const [pendingAmulet, setPendingAmulet] = useState<Amulet | null>(null);
+  const [showSupremeConfirm, setShowSupremeConfirm] = useState(false);
 
   const handleUpgrade = (cost: number, type: any, value: number, name: string, count: number = 1) => {
     if (buyUpgrade(cost, type, value, count)) {
@@ -112,10 +118,14 @@ export default function App() {
     }
   };
 
-  const handleBuyAmulet = (type: AmuletType, cost: number) => {
+  const handleBuyAmulet = (type: AmuletType, cost: number, forceDoublePassive: boolean = false) => {
+    if (type === 'Supreme' && !forceDoublePassive) {
+      setShowSupremeConfirm(true);
+      return;
+    }
     if (state.coins >= cost) {
       if (payCoins(cost)) {
-        const newAmulet = generateAmulet(type);
+        const newAmulet = generateAmulet(type, forceDoublePassive);
         setPendingAmulet(newAmulet);
       }
     } else {
@@ -152,6 +162,72 @@ export default function App() {
         }} 
       />
       
+      {/* Supreme Confirm Modal */}
+      <AnimatePresence>
+        {showSupremeConfirm && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl text-center"
+            >
+              <h2 className="text-2xl font-black text-purple-400 mb-4 tracking-tight">슈프림 아뮬렛 구매</h2>
+              <p className="text-slate-300 mb-6 text-sm">
+                일반 슈프림 아뮬렛을 구매하시겠습니까?<br/>
+                <span className="text-yellow-400 font-bold">50,000,000 코인</span>으로 패시브 2개가 확정인 <span className="text-purple-400 font-bold">슈프림 더블</span>을 구매할 수도 있습니다!
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={() => {
+                    setShowSupremeConfirm(false);
+                    if (state.coins >= 500000) {
+                      if (payCoins(500000)) {
+                        const newAmulet = generateAmulet('Supreme', false);
+                        setPendingAmulet(newAmulet);
+                      }
+                    } else {
+                      toast.error("코인이 부족합니다.");
+                    }
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white"
+                >
+                  일반 슈프림 구매 (500,000 코인)
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowSupremeConfirm(false);
+                    if (state.coins >= 50000000) {
+                      if (payCoins(50000000)) {
+                        const newAmulet = generateAmulet('Supreme', true);
+                        setPendingAmulet(newAmulet);
+                      }
+                    } else {
+                      toast.error("코인이 부족합니다.");
+                    }
+                  }}
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-[0_0_15px_rgba(147,51,234,0.5)]"
+                >
+                  슈프림 더블 구매 (50,000,000 코인)
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowSupremeConfirm(false)}
+                  className="w-full text-slate-400 hover:text-white mt-2"
+                >
+                  취소
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Amulet Replacement Modal */}
       <AnimatePresence>
         {pendingAmulet && (

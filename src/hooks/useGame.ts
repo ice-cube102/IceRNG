@@ -128,6 +128,20 @@ export function useGame() {
     });
     state.amulet.passives.forEach(p => {
       if (p.type === 'Machine Learning') hasMachineLearning = true;
+      if (p.type === 'Jackpot Rush') {
+        amuletJackpotProb += p.value1;
+        amuletJackpotPower += p.value2;
+      }
+      if (p.type === 'Coin Shower') {
+        amuletCoin *= p.value1;
+      }
+      if (p.type === 'EXP Power') {
+        amuletExp *= p.value1;
+        amuletLuck *= p.value2;
+      }
+      if (p.type === 'Burning Dice') {
+        amuletSpeed -= p.value1;
+      }
     });
   }
 
@@ -180,45 +194,7 @@ export function useGame() {
         let changed = false;
         const newCooldowns = { ...prev.passiveCooldowns };
         
-        const newBuffs = prev.activeBuffs.filter(b => {
-          if (b.expiry <= now) {
-            changed = true;
-            // Set cooldowns when buffs expire
-            if (['Jackpot Rush', 'Coin Shower', 'EXP Power'].includes(b.type)) {
-              newCooldowns[b.type] = now + 45000; // 45s cooldown
-            }
-            return false;
-          }
-          return true;
-        });
-
-        const expiredExpPower = prev.activeBuffs.find(b => b.type === 'EXP Power' && b.expiry <= now);
-        if (expiredExpPower) {
-          const stacks = Math.min(6, Math.max(1, Math.floor((expiredExpPower.accumulated || 0) / 1000)));
-          const blessingExp = 1 + (0.1 * stacks);
-          const blessingLuck = 1 + (0.1 * stacks);
-          newBuffs.push({
-            type: 'EXP Blessing',
-            expiry: now + 20000,
-            value1: blessingExp,
-            value2: blessingLuck,
-            stacks
-          });
-          changed = true;
-        }
-
-        const expiredBurning = prev.activeBuffs.find(b => b.type === 'Burning' && b.expiry <= now);
-        if (expiredBurning) {
-          newCooldowns['Burning Dice'] = now + 45000;
-          newBuffs.push({
-            type: 'Curse of Ash',
-            expiry: now + 20000,
-            value1: 0.15, // -15% speed
-            value2: 3, // x3 aura
-            accumulated: expiredBurning.accumulated
-          });
-          changed = true;
-        }
+        const newBuffs = prev.activeBuffs;
 
         const elapsed = now - prev.lastRollTime;
         const remaining = Math.max(0, actualCooldown - elapsed);
@@ -324,59 +300,26 @@ export function useGame() {
 
         if (isJackpot) {
           newJackpotCount++;
-          const jrBuff = newBuffs.find(b => b.type === 'Jackpot Rush');
-          if (jrBuff) jrBuff.accumulated = (jrBuff.accumulated || 0) + 1;
         }
 
-        const csBuff = newBuffs.find(b => b.type === 'Coin Shower');
-        if (csBuff) csBuff.accumulated = (csBuff.accumulated || 0) + earnedCoins;
-
-        const epBuff = newBuffs.find(b => b.type === 'EXP Power');
-        if (epBuff) epBuff.accumulated = (epBuff.accumulated || 0) + expGain;
-
-        const burningBuff = newBuffs.find(b => b.type === 'Burning');
-        if (burningBuff) burningBuff.accumulated = (burningBuff.accumulated || 0) + 1;
-
-        if (prev.amulet) {
-          prev.amulet.passives.forEach(p => {
-            if (p.type === 'Jackpot Rush' && newJackpotCount >= 15 && (!prev.passiveCooldowns['Jackpot Rush'] || now > prev.passiveCooldowns['Jackpot Rush'])) {
-              if (!newBuffs.some(b => b.type === 'Jackpot Rush')) {
-                newJackpotCount = 0;
-                newBuffs.push({ type: 'Jackpot Rush', expiry: now + 60000, value1: p.value1, value2: p.value2, accumulated: 0 });
-              }
-            }
-            if (p.type === 'Coin Shower' && newRollCount >= 50 && (!prev.passiveCooldowns['Coin Shower'] || now > prev.passiveCooldowns['Coin Shower'])) {
-              if (!newBuffs.some(b => b.type === 'Coin Shower')) {
-                newRollCount = 0;
-                newBuffs.push({ type: 'Coin Shower', expiry: now + 60000, value1: p.value1, value2: p.value2, accumulated: 0 });
-              }
-            }
-            if (p.type === 'Burning Dice' && !burningBuff && (!prev.passiveCooldowns['Burning Dice'] || now > prev.passiveCooldowns['Burning Dice'])) {
-              if (newBurningCounter >= 75 || Math.random() < 0.02) {
-                newBurningCounter = 0;
-                newBuffs.push({ type: 'Burning', expiry: now + 60000, value1: p.value1, value2: p.value2, accumulated: 0 });
-              }
-            }
-          });
+        if (prev.amulet?.passives.some(p => p.type === 'Burning Dice') && Math.random() < 0.5) {
+          buffAuraAmount *= 2;
         }
 
         let newExp = prev.exp;
         let newLevel = prev.level;
         
-        if (!epBuff) {
+        {
           newExp += expGain;
           let expReq = 100 * newLevel;
-          while (newExp >= expReq) {
+          while (newExp >= expReq && newLevel < 100) {
             newExp -= expReq;
             newLevel++;
             expReq = 100 * newLevel;
-            
-            if (prev.amulet?.passives.some(p => p.type === 'EXP Power') && (!prev.passiveCooldowns['EXP Power'] || now > prev.passiveCooldowns['EXP Power'])) {
-              if (!newBuffs.some(b => b.type === 'EXP Power')) {
-                const p = prev.amulet.passives.find(p => p.type === 'EXP Power')!;
-                newBuffs.push({ type: 'EXP Power', expiry: now + 60000, value1: p.value1, value2: p.value2, accumulated: 0 });
-              }
-            }
+          }
+          if (newLevel >= 100) {
+            newLevel = 100;
+            newExp = 0;
           }
         }
 
@@ -487,7 +430,7 @@ export function useGame() {
     return false;
   }, [state.coins]);
 
-  const generateAmulet = useCallback((type: AmuletType): Amulet => {
+  const generateAmulet = useCallback((type: AmuletType, forceDoublePassive: boolean = false): Amulet => {
     const id = Math.random().toString(36).substr(2, 9);
     let luckMultiplier = 1;
     let numStats = 0;
@@ -527,18 +470,18 @@ export function useGame() {
       const getPassive = (pType: PassiveType): AmuletPassive => {
         switch(pType) {
           case 'Jackpot Rush': return { type: pType, value1: 0.05, value2: 0.5 };
-          case 'Coin Shower': return { type: pType, value1: 2, value2: 0.05 };
-          case 'EXP Power': return { type: pType, value1: 2, value2: 2 };
+          case 'Coin Shower': return { type: pType, value1: 1.5, value2: 0 };
+          case 'EXP Power': return { type: pType, value1: 2, value2: 1.2 };
           case 'Machine Learning': return { type: pType, value1: 0, value2: 0 };
           case 'Standard Deviation': return { type: pType, value1: 0, value2: 0 };
-          case 'Burning Dice': return { type: pType, value1: 0.05, value2: 2 };
+          case 'Burning Dice': return { type: pType, value1: 0.1, value2: 2 };
         }
       };
 
       const firstPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
       passives.push(getPassive(firstPassive));
 
-      if (Math.random() < 0.05) {
+      if (forceDoublePassive || Math.random() < 0.05) {
         let secondPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
         while (secondPassive === firstPassive) {
           secondPassive = passivePool[Math.floor(Math.random() * passivePool.length)];
