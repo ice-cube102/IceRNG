@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useGame, Amulet, AmuletType, AmuletPassive, AmuletStat, QUICK_PULSE_PRICES } from './hooks/useGame';
 import { RARITIES } from './constants/rarities';
-import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle, Circle, Square, Triangle, Hexagon, Sun, Globe, Moon, Infinity as InfinityIcon, Cloud, Eye, Crown, RotateCcw } from 'lucide-react';
+import { MOON_RARITIES } from './constants/moonRarities';
+import { MiningGame } from './components/MiningGame';
+import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle, Circle, Square, Triangle, Hexagon, Sun, Globe, Moon, Infinity as InfinityIcon, Cloud, Eye, Crown, RotateCcw, Pickaxe, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -100,8 +102,13 @@ export default function App() {
     generateAmulet,
     setAmulet,
     payCoins,
+    paySpaceCoins,
+    addFragments,
+    buyOreUpgrade,
     toggleAutoRoll,
     resetGame,
+    buySpaceUpgrade,
+    changeRegion,
     hasMachineLearning,
     amuletStats,
     buffStats
@@ -115,6 +122,35 @@ export default function App() {
       toast.success(`${name} 구매 완료!`);
     } else {
       toast.error("코인이 부족합니다.");
+    }
+  };
+
+  const handleSpaceUpgrade = (cost: number, type: any, name: string, count: number = 1) => {
+    if (buySpaceUpgrade(cost, type, count)) {
+      toast.success(`${name} 구매 완료!`);
+    } else {
+      toast.error("우주 코인이 부족합니다.");
+    }
+  };
+
+  const handleBuyGalaxyAmulet = () => {
+    if (state.spaceCoins >= 10000000) { // Let's say 10,000,000 space coins
+      if (paySpaceCoins(10000000)) {
+        const newAmulet = generateAmulet('Galaxy');
+        setPendingAmulet(newAmulet);
+      }
+    } else {
+      toast.error("우주 코인이 부족합니다.");
+    }
+  };
+
+  const handleOreUpgrade = (cost: number, fragmentType: string, type: any, name: string) => {
+    const currentFragments = state.fragments[fragmentType] || 0;
+    if (currentFragments >= cost) {
+      buyOreUpgrade(cost, fragmentType, type);
+      toast.success(`${name} 구매 완료!`);
+    } else {
+      toast.error(`${fragmentType}이(가) 부족합니다.`);
     }
   };
 
@@ -216,16 +252,31 @@ export default function App() {
               {getIcon(rarestAuraObj.icon, `w-8 h-8`)}
             </div>
             <div>
-              <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight">IceRNG</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight">IceRNG</h1>
+                {state.unlockedRegions.length > 1 && (
+                  <select 
+                    className="bg-slate-800 border border-slate-700 text-white text-xs rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-cyan-500"
+                    value={state.currentRegion}
+                    onChange={(e) => changeRegion(e.target.value)}
+                  >
+                    {state.unlockedRegions.map(region => (
+                      <option key={region} value={region}>
+                        {region === 'Earth' ? '지구' : region === 'Moon' ? '달' : '지하 세계'}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <p className="text-xs font-medium text-cyan-400 tracking-widest uppercase">운을 시험해보세요</p>
               
               {/* Buffs Display */}
-              {(state.activeBuffs.length > 0 || Object.entries(state.passiveCooldowns).some(([_, cd]) => cd > Date.now())) && (
+              {(state.activeBuffs.length > 0 || Object.entries(state.passiveCooldowns).some(([_, cd]) => (cd as number) > Date.now())) && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {state.activeBuffs.map((buff, idx) => {
-                    const isDebuff = buff.type === 'Curse of Ash' || buff.type === 'Burning';
+                    const isDebuff = buff.type === '재의 저주' || buff.type === '버닝';
                     const colorClass = isDebuff ? 'bg-red-900/30 border-red-500/50 text-red-300' : 'bg-indigo-900/30 border-indigo-500/50 text-indigo-300';
-                    const Icon = buff.type === 'Burning' ? Flame : buff.type === 'Curse of Ash' ? Skull : Activity;
+                    const Icon = buff.type === '버닝' ? Flame : buff.type === '재의 저주' ? Skull : Activity;
                     return (
                       <Badge key={idx} variant="outline" className={`${colorClass} py-0.5 px-2 text-[10px]`}>
                         <Icon className="w-3 h-3 mr-1" />
@@ -236,12 +287,12 @@ export default function App() {
                     );
                   })}
                   {Object.entries(state.passiveCooldowns).map(([type, cd], idx) => {
-                    if (cd <= Date.now()) return null;
+                    if ((cd as number) <= Date.now()) return null;
                     return (
                       <Badge key={`cd-${idx}`} variant="outline" className="bg-slate-800/50 border-slate-700 text-slate-400 py-0.5 px-2 text-[10px]">
                         <Timer className="w-3 h-3 mr-1" />
                         {type} CD
-                        <span className="ml-1 opacity-70">{Math.ceil((cd - Date.now()) / 1000)}s</span>
+                        <span className="ml-1 opacity-70">{Math.ceil(((cd as number) - Date.now()) / 1000)}s</span>
                       </Badge>
                     );
                   })}
@@ -271,6 +322,24 @@ export default function App() {
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">잭팟 파워</p>
                 <p className="text-lg font-black text-orange-400">+{totalJackpotPower.toFixed(0)}%</p>
               </div>
+              {state.unlockedRegions.includes('Moon') && (
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">우주 코인</p>
+                  <p className="text-lg font-black text-indigo-400 flex items-center justify-center gap-1">
+                    <Globe className="w-4 h-4" />
+                    {state.spaceCoins.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {state.unlockedRegions.includes('Underworld') && (
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">광석 조각</p>
+                  <p className="text-lg font-black text-emerald-400 flex items-center justify-center gap-1">
+                    <Gem className="w-4 h-4" />
+                    {Object.values(state.fragments as Record<string, number>).reduce((a: number, b: number) => a + b, 0).toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           
@@ -375,27 +444,36 @@ export default function App() {
             </Card>
 
             {/* Controls */}
-            <div className="flex gap-4">
-              <Button 
-                size="lg" 
-                onClick={roll} 
-                disabled={isRolling || cooldownRemaining > 0}
-                className="flex-1 py-8 text-2xl font-black bg-white text-black hover:bg-cyan-50 transition-all rounded-2xl shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(6,182,212,0.3)] disabled:opacity-50"
-              >
-                {cooldownRemaining > 0 ? `${(cooldownRemaining / 1000).toFixed(1)}초` : '아우라 뽑기'}
-              </Button>
-              
-              {hasMachineLearning && (
+            {state.currentRegion === 'Underworld' ? (
+              <MiningGame 
+                pickaxeLevel={state.pickaxeLevel}
+                processingLevel={state.processingLevel}
+                oreLuckLevel={state.oreLuckLevel}
+                onMine={addFragments}
+              />
+            ) : (
+              <div className="flex gap-4">
                 <Button 
-                  size="lg"
-                  variant={state.autoRoll ? "default" : "outline"}
-                  onClick={toggleAutoRoll}
-                  className={`flex-1 py-8 text-xl font-black transition-all rounded-2xl ${state.autoRoll ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800'}`}
+                  size="lg" 
+                  onClick={roll} 
+                  disabled={isRolling || cooldownRemaining > 0}
+                  className="flex-1 py-8 text-2xl font-black bg-white text-black hover:bg-cyan-50 transition-all rounded-2xl shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(6,182,212,0.3)] disabled:opacity-50"
                 >
-                  {state.autoRoll ? '오토 뽑기 중지' : '오토 뽑기 시작'}
+                  {cooldownRemaining > 0 ? `${(cooldownRemaining / 1000).toFixed(1)}초` : '아우라 뽑기'}
                 </Button>
-              )}
-            </div>
+                
+                {hasMachineLearning && (
+                  <Button 
+                    size="lg"
+                    variant={state.autoRoll ? "default" : "outline"}
+                    onClick={toggleAutoRoll}
+                    className={`flex-1 py-8 text-xl font-black transition-all rounded-2xl ${state.autoRoll ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800'}`}
+                  >
+                    {state.autoRoll ? '오토 뽑기 중지' : '오토 뽑기 시작'}
+                  </Button>
+                )}
+              </div>
+            )}
 
           </div>
 
@@ -406,6 +484,9 @@ export default function App() {
                 <TabsTrigger value="shop" className="flex-1 rounded-xl py-3 text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white">
                   <ShoppingBag className="w-4 h-4 mr-2" /> 상점
                 </TabsTrigger>
+                <TabsTrigger value="inventory" className="flex-1 rounded-xl py-3 text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+                  <InventoryIcon className="w-4 h-4 mr-2" /> 인벤토리
+                </TabsTrigger>
                 <TabsTrigger value="amulets" className="flex-1 rounded-xl py-3 text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white">
                   <Medal className="w-4 h-4 mr-2" /> 아뮬렛
                 </TabsTrigger>
@@ -414,7 +495,280 @@ export default function App() {
                     <Zap className="w-4 h-4 mr-2" /> 합성소
                   </TabsTrigger>
                 )}
+                {state.unlockedRegions.includes('Moon') && (
+                  <TabsTrigger value="spaceShop" className="flex-1 rounded-xl py-3 text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+                    <Globe className="w-4 h-4 mr-2" /> 우주 상점
+                  </TabsTrigger>
+                )}
+                {state.unlockedRegions.includes('Underworld') && (
+                  <TabsTrigger value="underworldShop" className="flex-1 rounded-xl py-3 text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+                    <Pickaxe className="w-4 h-4 mr-2" /> 지하 상점
+                  </TabsTrigger>
+                )}
               </TabsList>
+
+              <TabsContent value="spaceShop" className="space-y-4">
+                <Card className="bg-slate-900/20 border-slate-800/50 overflow-hidden">
+                  <CardHeader className="bg-slate-900/40 border-b border-slate-800/50 py-4">
+                    <CardTitle className="text-lg text-white flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-indigo-400" />
+                      우주 코인 업그레이드
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-400">우주 코인을 사용하여 특별한 능력을 강화하세요.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <TrendingUp className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">레벨 제한 증가</span>
+                          <span className="text-[10px] text-slate-500 font-medium">+10 최대 레벨 (Lv.{state.spaceMaxLevelBonusLevel}/100)</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleSpaceUpgrade(1000000, 'maxLevel', '레벨 제한 증가')}
+                        disabled={state.spaceCoins < 1000000 || state.spaceMaxLevelBonusLevel >= 100}
+                        className="bg-indigo-500 text-white hover:bg-indigo-400 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        1,000,000
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <Star className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">슈퍼 잭팟 확률</span>
+                          <span className="text-[10px] text-slate-500 font-medium">+0.5% 확률 (Lv.{state.superJackpotProbLevel}/40)</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleSpaceUpgrade(5000000, 'superJackpotProb', '슈퍼 잭팟 확률')}
+                        disabled={state.spaceCoins < 5000000 || state.superJackpotProbLevel >= 40}
+                        className="bg-indigo-500 text-white hover:bg-indigo-400 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        5,000,000
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <Zap className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">슈퍼 잭팟 파워</span>
+                          <span className="text-[10px] text-slate-500 font-medium">+20% 파워 (Lv.{state.superJackpotPowerLevel}/10)</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleSpaceUpgrade(10000000, 'superJackpotPower', '슈퍼 잭팟 파워')}
+                        disabled={state.spaceCoins < 10000000 || state.superJackpotPowerLevel >= 10}
+                        className="bg-indigo-500 text-white hover:bg-indigo-400 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        10,000,000
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-900/20 border-slate-800/50 overflow-hidden">
+                  <CardHeader className="bg-slate-900/40 border-b border-slate-800/50 py-4">
+                    <CardTitle className="text-lg text-white flex items-center gap-2">
+                      <Medal className="w-5 h-5 text-indigo-400" />
+                      은하 아뮬렛
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-white">은하 아뮬렛 뽑기</span>
+                        <span className="text-[10px] text-slate-500 font-medium">x3 행운 확정, 머신 러닝 확정, 특수 패시브</span>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={handleBuyGalaxyAmulet}
+                        disabled={state.spaceCoins < 10000000}
+                        className="bg-indigo-500 text-white hover:bg-indigo-400 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        10,000,000
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="underworldShop" className="space-y-4">
+                <Card className="bg-slate-900/20 border-slate-800/50 overflow-hidden">
+                  <CardHeader className="bg-slate-900/40 border-b border-slate-800/50 py-4">
+                    <CardTitle className="text-lg text-white flex items-center gap-2">
+                      <Pickaxe className="w-5 h-5 text-emerald-400" />
+                      광석 업그레이드
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-400">광석 조각을 사용하여 채굴 능력과 다양한 스탯을 강화하세요.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <Pickaxe className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">곡괭이 강화</span>
+                          <span className="text-[10px] text-slate-500 font-medium">+50% 곡괭이 데미지 (Lv.{state.pickaxeLevel}/20)</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleOreUpgrade(10, 'Basic fragment', 'pickaxe', '곡괭이 강화')}
+                        disabled={state.fragments['Basic fragment'] < 10 || state.pickaxeLevel >= 20}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        10 Basic
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <Activity className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">가공법 개선</span>
+                          <span className="text-[10px] text-slate-500 font-medium">-5% 미니게임 난이도 (Lv.{state.processingLevel}/12)</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleOreUpgrade(5, 'Rare fragment', 'processing', '가공법 개선')}
+                        disabled={state.fragments['Rare fragment'] < 5 || state.processingLevel >= 12}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        5 Rare
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <Gem className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">행운의 광석</span>
+                          <span className="text-[10px] text-slate-500 font-medium">+x0.1 광석 행운 (Lv.{state.oreLuckLevel}/{state.level * 100})</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleOreUpgrade(2, 'Epic fragment', 'oreLuck', '행운의 광석')}
+                        disabled={state.fragments['Epic fragment'] < 2 || state.oreLuckLevel >= state.level * 100}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        2 Epic
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <TrendingUp className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">최대 레벨 증가</span>
+                          <span className="text-[10px] text-slate-500 font-medium">+10 최대 레벨 (Lv.{state.oreMaxLevelBonusLevel}/10)</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleOreUpgrade(1, 'Legendary fragment', 'oreMaxLevel', '최대 레벨 증가')}
+                        disabled={state.fragments['Legendary fragment'] < 1 || state.oreMaxLevelBonusLevel >= 10}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        1 Legendary
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                          <Star className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">슈퍼 잭팟 확률</span>
+                          <span className="text-[10px] text-slate-500 font-medium">+0.5% 확률 (Lv.{state.oreSuperJackpotProbLevel}/40)</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleOreUpgrade(1, 'Mythical fragment', 'oreSuperJackpotProb', '슈퍼 잭팟 확률')}
+                        disabled={state.fragments['Mythical fragment'] < 1 || state.oreSuperJackpotProbLevel >= 40}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                      >
+                        1 Mythical
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-900/20 border-slate-800/50 overflow-hidden">
+                  <CardHeader className="bg-slate-900/40 border-b border-slate-800/50 py-4">
+                    <CardTitle className="text-lg text-white flex items-center gap-2">
+                      <Medal className="w-5 h-5 text-emerald-400" />
+                      광석 아뮬렛
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-3">
+                    {[
+                      { type: 'Basic Ore', cost: 100, fragment: 'Basic fragment', name: '베이직 광석 아뮬렛' },
+                      { type: 'Rare Ore', cost: 50, fragment: 'Rare fragment', name: '레어 광석 아뮬렛' },
+                      { type: 'Epic Ore', cost: 20, fragment: 'Epic fragment', name: '에픽 광석 아뮬렛' },
+                      { type: 'Legendary Ore', cost: 10, fragment: 'Legendary fragment', name: '레전더리 광석 아뮬렛' },
+                      { type: 'Mythical Ore', cost: 5, fragment: 'Mythical fragment', name: '미시컬 광석 아뮬렛' }
+                    ].map(amulet => (
+                      <div key={amulet.type} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white">{amulet.name}</span>
+                          <span className="text-[10px] text-slate-500 font-medium">{amulet.cost} {amulet.fragment.split(' ')[0]} 필요</span>
+                        </div>
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          onClick={() => {
+                            if ((state.fragments[amulet.fragment] || 0) >= amulet.cost) {
+                              // Use a dummy upgrade type to deduct fragments without changing stats
+                              buyOreUpgrade(amulet.cost, amulet.fragment, 'pickaxe', 0); 
+                              const newAmulet = generateAmulet(amulet.type as AmuletType);
+                              setPendingAmulet(newAmulet);
+                            } else {
+                              toast.error(`${amulet.fragment}이(가) 부족합니다.`);
+                            }
+                          }}
+                          disabled={(state.fragments[amulet.fragment] || 0) < amulet.cost}
+                          className="bg-emerald-600 text-white hover:bg-emerald-500 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
+                        >
+                          {amulet.cost} {amulet.fragment.split(' ')[0]}
+                        </Button>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="shop" className="space-y-4">
                 <Card className="bg-slate-900/20 border-slate-800/50 overflow-hidden">
@@ -544,6 +898,7 @@ export default function App() {
                     </div>
                     <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
                       <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                        <h3 className="text-sm font-bold text-slate-400 mb-2">지구 아우라</h3>
                         {RARITIES.slice(0, -1).map((rarity, idx) => {
                           const count = state.inventory[rarity.name] || 0;
                           const nextRarity = RARITIES[idx + 1];
@@ -595,7 +950,65 @@ export default function App() {
                             </div>
                           );
                         })}
-                        {Object.keys(state.inventory).length === 0 && (
+
+                        {state.unlockedRegions.includes('Moon') && (
+                          <>
+                            <h3 className="text-sm font-bold text-indigo-400 mb-2 mt-6">달 아우라</h3>
+                            {MOON_RARITIES.slice(0, -1).map((rarity, idx) => {
+                              const count = state.moonInventory[rarity.name] || 0;
+                              const nextRarity = MOON_RARITIES[idx + 1];
+                              
+                              return (
+                                <div key={rarity.name} className={`flex flex-col gap-2 p-4 rounded-2xl border ${count === 0 ? 'bg-slate-950/40 border-slate-900' : 'bg-slate-900/40 border-slate-800/50'}`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      {getIcon(rarity.icon, `w-5 h-5 ${rarity.color}`)}
+                                      <span className={`font-bold ${rarity.color}`}>{rarity.name}</span>
+                                      <span className="text-slate-400 text-xs">x{count.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button 
+                                        size="sm"
+                                        disabled={count < 5} 
+                                        onClick={() => {
+                                          if (synthesize(idx, false, true)) toast.success(
+                                            <div className="flex items-center gap-2">
+                                              {getIcon(nextRarity.icon, `w-4 h-4 ${nextRarity.color}`)}
+                                              <span>{nextRarity.name} 합성 성공!</span>
+                                            </div>
+                                          );
+                                        }}
+                                        className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold"
+                                      >
+                                        합성 (5개)
+                                      </Button>
+                                      <Button 
+                                        size="sm"
+                                        disabled={count < 5} 
+                                        onClick={() => {
+                                          if (synthesize(idx, true, true)) toast.success(
+                                            <div className="flex items-center gap-2">
+                                              {getIcon(nextRarity.icon, `w-4 h-4 ${nextRarity.color}`)}
+                                              <span>{nextRarity.name} 최대 합성 성공!</span>
+                                            </div>
+                                          );
+                                        }}
+                                        className="bg-indigo-900/50 hover:bg-indigo-800 text-indigo-300 text-xs font-bold"
+                                      >
+                                        최대 합성
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-slate-500 flex items-center justify-end gap-1">
+                                    결과: {getIcon(nextRarity.icon, `w-3 h-3 ${nextRarity.color}`)} <span className={nextRarity.color}>{nextRarity.name}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </>
+                        )}
+
+                        {Object.keys(state.inventory).length === 0 && Object.keys(state.moonInventory).length === 0 && (
                           <div className="flex flex-col items-center justify-center py-32 text-slate-600">
                             <Zap className="w-12 h-12 mb-4 opacity-10" />
                             <p className="text-sm font-medium">합성할 아우라가 없습니다</p>
