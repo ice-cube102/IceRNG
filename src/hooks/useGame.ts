@@ -272,10 +272,31 @@ export function useGame() {
       
       const coinMultiplier = isJackpot ? jackpotPower : 1;
 
+      const selectedIndex = RARITIES.findIndex(r => r.name === selectedRarity.name);
+      let trueBaseProb = 0;
+      let trueLuckProb = 0;
+      let probNotCaughtYetBase = 1;
+      let probNotCaughtYetLuck = 1;
+
+      for (let i = RARITIES.length - 1; i >= 0; i--) {
+        const rarity = RARITIES[i];
+        const pBase = Math.min(1, 1 / rarity.chance);
+        const pLuck = Math.min(1, (1 / rarity.chance) * totalLuck);
+        
+        if (i === selectedIndex) {
+          trueBaseProb = i === 0 ? probNotCaughtYetBase : probNotCaughtYetBase * pBase;
+          trueLuckProb = i === 0 ? probNotCaughtYetLuck : probNotCaughtYetLuck * pLuck;
+          break;
+        }
+
+        probNotCaughtYetBase *= (1 - pBase);
+        probNotCaughtYetLuck *= (1 - pLuck);
+      }
+
       setCurrentRoll({
         ...selectedRarity,
-        baseProb: (1 / selectedRarity.chance) * 100,
-        luckProb: (1 / selectedRarity.chance) * totalLuck * 100
+        baseProb: trueBaseProb * 100,
+        luckProb: trueLuckProb * 100
       });
       setIsRolling(false);
       isRollingRef.current = false;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame, Amulet, AmuletType, AmuletPassive, AmuletStat, QUICK_PULSE_PRICES } from './hooks/useGame';
 import { RARITIES } from './constants/rarities';
-import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle } from 'lucide-react';
+import { Coins, Sparkles, Trophy, Timer, Activity, TrendingUp, Star, Zap, Medal, Package as InventoryIcon, ChevronRight, ShoppingBag, Flame, Skull, AlertCircle, Circle, Square, Triangle, Hexagon, Sun, Globe, Moon, Infinity as InfinityIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -11,7 +11,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast, Toaster } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 
-const getIcon = (IconComponent: any, className: string) => {
+const ICON_MAP: Record<string, any> = {
+  Circle,
+  Square,
+  Triangle,
+  Star,
+  Hexagon,
+  Flame,
+  Sun,
+  Globe,
+  Moon,
+  Infinity: InfinityIcon
+};
+
+const getIcon = (iconName: string, className: string) => {
+  const IconComponent = ICON_MAP[iconName] || Star;
   return <IconComponent className={className} />;
 };
 
