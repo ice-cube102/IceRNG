@@ -580,7 +580,7 @@ export default function App() {
                       <span className="font-bold text-xs">다이아 뽑기</span>
                       <span className="text-[10px]">100,000</span>
                     </Button>
-                    <Button variant="outline" className="bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 flex flex-col h-auto py-2" onClick={() => handleBuyAmulet('Supreme', 500000)}>
+                    <Button variant="outline" className="bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 flex flex-col h-auto py-2" onClick={() => handleBuyAmulet('Supreme', 500000, false)}>
                       <span className="font-bold text-xs">슈프림 뽑기</span>
                       <span className="text-[10px]">500,000</span>
                     </Button>
