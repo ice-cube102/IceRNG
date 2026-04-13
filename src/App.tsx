@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast, Toaster } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, googleProvider, signInWithPopup, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from './lib/firebase';
+import { auth, googleProvider, signInWithPopup, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from './lib/firebase';
 
 const ICON_MAP: Record<string, any> = {
   Circle,
@@ -352,14 +352,14 @@ export default function App() {
               </div>
               <div className="flex gap-4 mt-8">
                 <Button className="flex-1 py-6 bg-slate-800 hover:bg-slate-700 text-white font-bold text-lg rounded-xl" onClick={() => setPendingAmulet(null)}>
-                  기존 유지 (버리기)
+                  {pendingAmulet.enchantment ? '기존 유지 (버리기)' : '기존 유지 (버리기)'}
                 </Button>
                 <Button className="flex-1 py-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)]" onClick={() => {
                   setAmulet(pendingAmulet);
                   setPendingAmulet(null);
-                  toast.success("새로운 아뮬렛을 장착했습니다!");
+                  toast.success(pendingAmulet.enchantment ? "인챈트된 아뮬렛을 장착했습니다!" : "새로운 아뮬렛을 장착했습니다!");
                 }}>
-                  새 아뮬렛 장착
+                  {pendingAmulet.enchantment ? '인챈트 아뮬렛 장착' : '새 아뮬렛 장착'}
                 </Button>
               </div>
             </motion.div>
@@ -700,7 +700,7 @@ export default function App() {
                       </div>
                     )}
 
-                    {state.quickPulseCount < 5 && (
+                    {state.quickPulseCount < 10 && (
                       <ShopItem 
                         name="신속의 파동" 
                         desc="-0.08초 쿨타임 감소" 
@@ -759,48 +759,52 @@ export default function App() {
                           />
                         )}
 
-                        <ShopItem 
-                          name="우주적 코인 증폭" 
-                          desc={`+20% 우주 코인 획득량 (현재: +${state.spaceCoinMultLevel * 20}%, 최대 +500%)`}
-                          cost={Math.floor(10 * Math.pow(2, state.spaceCoinMultLevel))} 
-                          icon={<Globe className="w-4 h-4 text-indigo-400" />}
-                          onBuy={() => handleUpgrade(Math.floor(10 * Math.pow(2, state.spaceCoinMultLevel)), 'spaceCoinMult', 1, "우주적 코인 증폭", 1, 'spaceCoins')}
-                          currency="spaceCoins"
-                        />
+                        {state.spaceCoinMultLevel < 5 && (
+                          <ShopItem 
+                            name="우주적 코인 증폭" 
+                            desc={`+20% 우주 코인 획득량 (현재: +${state.spaceCoinMultLevel * 20}%, 최대 +100%)`}
+                            cost={Math.floor(10 * Math.pow(2, state.spaceCoinMultLevel))} 
+                            icon={<Globe className="w-4 h-4 text-indigo-400" />}
+                            onBuy={() => handleUpgrade(Math.floor(10 * Math.pow(2, state.spaceCoinMultLevel)), 'spaceCoinMult', 1, "우주적 코인 증폭", 1, 'spaceCoins')}
+                            currency="spaceCoins"
+                          />
+                        )}
 
-                        <div className="flex flex-col gap-2 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-indigo-400">
-                                <Sparkles className="w-4 h-4" />
+                        {state.spaceLuckLevel < 50000 && (
+                          <div className="flex flex-col gap-2 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-indigo-400">
+                                  <Sparkles className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-white">우주적 행운</span>
+                                  <span className="text-[10px] text-slate-500 font-medium">+{0.2 * state.spaceLuckLevel}x 행운 배수 (Lv.{state.spaceLuckLevel}/50000)</span>
+                                </div>
                               </div>
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-white">우주적 행운</span>
-                                <span className="text-[10px] text-slate-500 font-medium">+{0.2 * cloverAmount}x 행운 배수 (Lv.{state.spaceLuckLevel}/50000)</span>
-                              </div>
-                            </div>
-                            <Button 
-                              variant="secondary" 
-                              size="sm" 
-                              onClick={() => handleUpgrade(10 * cloverAmount, 'spaceLuck', 1, `우주적 행운 x${cloverAmount}`, cloverAmount, 'spaceCoins')}
-                              disabled={state.spaceCoins < 10 * cloverAmount || state.spaceLuckLevel + cloverAmount > 50000}
-                              className="bg-indigo-900/50 text-indigo-200 hover:bg-indigo-800/50 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
-                            >
-                              {(10 * cloverAmount).toLocaleString()}
-                            </Button>
-                          </div>
-                          <div className="flex gap-1 mt-2">
-                            {[1, 5, 10, 50, 100, 1000, 10000].map(amt => (
-                              <button 
-                                key={amt}
-                                onClick={() => setCloverAmount(amt)}
-                                className={`flex-1 py-1 text-[9px] font-bold rounded-md transition-colors ${cloverAmount === amt ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                              <Button 
+                                variant="secondary" 
+                                size="sm" 
+                                onClick={() => handleUpgrade(10 * cloverAmount, 'spaceLuck', 1, `우주적 행운 x${cloverAmount}`, cloverAmount, 'spaceCoins')}
+                                disabled={state.spaceCoins < 10 * cloverAmount}
+                                className="bg-indigo-900/50 text-indigo-200 hover:bg-indigo-800/50 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
                               >
-                                x{amt}
-                              </button>
-                            ))}
+                                {(10 * cloverAmount).toLocaleString()}
+                              </Button>
+                            </div>
+                            <div className="flex gap-1 mt-2">
+                              {[1, 5, 10, 50, 100, 1000, 10000].map(amt => (
+                                <button 
+                                  key={amt}
+                                  onClick={() => setCloverAmount(amt)}
+                                  className={`flex-1 py-1 text-[9px] font-bold rounded-md transition-colors ${cloverAmount === amt ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                >
+                                  x{amt}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </>
                     )}
 
@@ -823,39 +827,41 @@ export default function App() {
                           />
                         )}
 
-                        <div className="flex flex-col gap-2 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-fuchsia-400">
-                                <Sparkles className="w-4 h-4" />
+                        {state.gemLuckLevel < 50000 && (
+                          <div className="flex flex-col gap-2 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-fuchsia-400">
+                                  <Sparkles className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-white">보석 행운</span>
+                                  <span className="text-[10px] text-slate-500 font-medium">+{0.5 * state.gemLuckLevel}x 행운 배수 (Lv.{state.gemLuckLevel}/50000)</span>
+                                </div>
                               </div>
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-white">보석 행운</span>
-                                <span className="text-[10px] text-slate-500 font-medium">+{0.5 * cloverAmount}x 행운 배수 (Lv.{state.gemLuckLevel}/50000)</span>
-                              </div>
-                            </div>
-                            <Button 
-                              variant="secondary" 
-                              size="sm" 
-                              onClick={() => handleUpgrade(1 * cloverAmount, 'gemLuck', 1, `보석 행운 x${cloverAmount}`, cloverAmount, 'gems')}
-                              disabled={state.gems < 1 * cloverAmount || state.gemLuckLevel + cloverAmount > 50000}
-                              className="bg-fuchsia-900/50 text-fuchsia-200 hover:bg-fuchsia-800/50 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
-                            >
-                              {(1 * cloverAmount).toLocaleString()}
-                            </Button>
-                          </div>
-                          <div className="flex gap-1 mt-2">
-                            {[1, 5, 10, 50, 100, 1000, 10000].map(amt => (
-                              <button 
-                                key={amt}
-                                onClick={() => setCloverAmount(amt)}
-                                className={`flex-1 py-1 text-[9px] font-bold rounded-md transition-colors ${cloverAmount === amt ? 'bg-fuchsia-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                              <Button 
+                                variant="secondary" 
+                                size="sm" 
+                                onClick={() => handleUpgrade(1 * cloverAmount, 'gemLuck', 0.5 * cloverAmount, `보석 행운 +${0.5 * cloverAmount}x`, cloverAmount, 'gems')}
+                                disabled={state.gems < 1 * cloverAmount || state.gemLuckLevel + cloverAmount > 50000}
+                                className="bg-fuchsia-900/50 text-fuchsia-200 hover:bg-fuchsia-800/50 text-[10px] font-black h-8 px-4 rounded-lg disabled:opacity-50"
                               >
-                                x{amt}
-                              </button>
-                            ))}
+                                {(1 * cloverAmount).toLocaleString()}
+                              </Button>
+                            </div>
+                            <div className="flex gap-1 mt-2">
+                              {[1, 5, 10, 50, 100, 1000, 10000].map(amt => (
+                                <button 
+                                  key={amt}
+                                  onClick={() => setCloverAmount(amt)}
+                                  className={`flex-1 py-1 text-[9px] font-bold rounded-md transition-colors ${cloverAmount === amt ? 'bg-fuchsia-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                >
+                                  x{amt}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </>
                     )}
                   </CardContent>
@@ -926,8 +932,12 @@ export default function App() {
                             variant="outline" 
                             className="bg-fuchsia-950/30 border-fuchsia-800/50 text-fuchsia-500 hover:bg-fuchsia-900/50 flex flex-col h-auto py-3" 
                             onClick={() => {
-                              if (enchantAmulet(1)) toast.success("1티어 인챈트 성공!");
-                              else toast.error("보석이 부족합니다.");
+                              if (!state.amulet) { toast.error("아뮬렛을 장착하세요."); return; }
+                              const newAmulet = enchantAmulet(1);
+                              if (newAmulet) {
+                                setPendingAmulet(newAmulet);
+                                toast.success("새로운 아뮬렛 발견!");
+                              } else toast.error("보석이 부족합니다.");
                             }}
                           >
                             <span className="font-bold text-xs mb-1">1티어 인챈트</span>
@@ -937,8 +947,12 @@ export default function App() {
                             variant="outline" 
                             className="bg-fuchsia-900/40 border-fuchsia-700/50 text-fuchsia-400 hover:bg-fuchsia-800/50 flex flex-col h-auto py-3" 
                             onClick={() => {
-                              if (enchantAmulet(2)) toast.success("2티어 인챈트 성공!");
-                              else toast.error("보석이 부족합니다.");
+                              if (!state.amulet) { toast.error("아뮬렛을 장착하세요."); return; }
+                              const newAmulet = enchantAmulet(2);
+                              if (newAmulet) {
+                                setPendingAmulet(newAmulet);
+                                toast.success("새로운 아뮬렛 발견!");
+                              } else toast.error("보석이 부족합니다.");
                             }}
                           >
                             <span className="font-bold text-xs mb-1">2티어 인챈트</span>
@@ -948,8 +962,12 @@ export default function App() {
                             variant="outline" 
                             className="bg-fuchsia-800/50 border-fuchsia-500/50 text-fuchsia-300 hover:bg-fuchsia-700/50 flex flex-col h-auto py-3" 
                             onClick={() => {
-                              if (enchantAmulet(3)) toast.success("3티어 인챈트 성공!");
-                              else toast.error("보석이 부족합니다.");
+                              if (!state.amulet) { toast.error("아뮬렛을 장착하세요."); return; }
+                              const newAmulet = enchantAmulet(3);
+                              if (newAmulet) {
+                                setPendingAmulet(newAmulet);
+                                toast.success("새로운 아뮬렛 발견!");
+                              } else toast.error("보석이 부족합니다.");
                             }}
                           >
                             <span className="font-bold text-xs mb-1">3티어 인챈트</span>
@@ -1054,6 +1072,17 @@ export default function App() {
                     </div>
 
                     <div className="space-y-2">
+                      <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">계정 관리</h3>
+                      <Button 
+                        variant="outline" 
+                        className="w-full font-bold border-red-900/50 text-red-400 hover:bg-red-900/20"
+                        onClick={() => signOut(auth)}
+                      >
+                        로그아웃
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
                       <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">위험 구역</h3>
                       <Button 
                         variant="destructive" 
@@ -1145,6 +1174,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      {/* Enchant Modal removed */}
     </div>
   );
 }

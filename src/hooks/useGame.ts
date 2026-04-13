@@ -385,7 +385,7 @@ export function useGame() {
         
         let earnedCoins = Math.floor(selectedRarity.coinValue * coinMultiplier * amuletCoin * buffCoinMult * abundanceMult * (1 + prev.spaceCoinMultLevel * 0.2));
         let earnedSpaceCoins = selectedRarity.spaceCoinValue ? Math.floor(selectedRarity.spaceCoinValue * coinMultiplier * amuletCoin * buffCoinMult * abundanceMult * (1 + prev.spaceCoinMultLevel * 0.2)) : 0;
-        let earnedGems = selectedRarity.gemValue ? selectedRarity.gemValue * amountToGive : 0;
+        let earnedGems = selectedRarity.gemValue ? selectedRarity.gemValue * amountToGive * 5 : 0;
 
         let newJackpotCount = prev.jackpotCount;
         let newRollCount = prev.rollCountForBuff + 1;
@@ -422,8 +422,9 @@ export function useGame() {
         }
 
         if (prev.amulet?.passives.some(p => p.type === '광속')) {
+          newLightSpeedRollCount++;
           if (newLightSpeedRollCount % 10 === 0) {
-            newLightSpeedMultiplier *= 0.998;
+            newLightSpeedMultiplier *= 0.995;
           }
         }
 
@@ -570,7 +571,7 @@ export function useGame() {
           if (prev.spaceJackpotPowerLevel >= 15) return prev;
           newState.spaceJackpotPowerLevel += count;
         } else if (type === 'spaceCoinMult') {
-          const maxLevel = 25;
+          const maxLevel = 5;
           if (prev.spaceCoinMultLevel >= maxLevel) return prev;
           const actualCount = Math.min(count, maxLevel - prev.spaceCoinMultLevel);
           newState.spaceCoinMultLevel += actualCount;
@@ -590,6 +591,7 @@ export function useGame() {
           if (prev.gemLuckLevel >= maxLevel) return prev;
           const actualCount = Math.min(count, maxLevel - prev.gemLuckLevel);
           newState.gemLuckLevel += actualCount;
+          newState.luck += actualCount * 0.5;
         } else if (type === 'enchantTable') {
           newState.enchantTableUnlocked = true;
         }
@@ -605,12 +607,14 @@ export function useGame() {
     let success = false;
     let message = '';
     setState(prev => {
-      if (prev.redeemedCodes.includes(code)) {
-        message = '이미 사용된 코드입니다.';
-        return prev;
+      const newState = { ...prev };
+      if (!['Sorry4DataReset', 'PressStart!', 'DevLUCK', 'DevONLY', 'Vulcan'].includes(code)) {
+        if (prev.redeemedCodes.includes(code)) {
+          message = '이미 사용된 코드입니다.';
+          return prev;
+        }
+        newState.redeemedCodes = [...prev.redeemedCodes, code];
       }
-
-      const newState = { ...prev, redeemedCodes: [...prev.redeemedCodes, code] };
       
       if (code === 'Sorry4DataReset') {
         newState.activeBuffs.push({
@@ -624,6 +628,15 @@ export function useGame() {
       } else if (code === 'PressStart!') {
         newState.coins += 1000;
         message = '1000 코인이 지급되었습니다!';
+        success = true;
+      } else if (code === 'DevLUCK') {
+        newState.luck *= 100;
+        message = '행운이 100배 증가했습니다!';
+        success = true;
+      } else if (code === 'Vulcan') {
+        newState.coins += 1000000000000;
+        newState.luck *= 100;
+        message = 'Vulcan 보상이 지급되었습니다!';
         success = true;
       } else if (code === 'DevONLY') {
         newState.coins += 100000000000000;
@@ -711,11 +724,21 @@ export function useGame() {
     } else if (type === 'Galactic') {
       luckMultiplier = 3.5;
       numStats = 4;
-      if (Math.random() < 0.25) passives.push({ type: '머신 러닝', value1: 0, value2: 0 });
+      
+      const hasML = Math.random() < 0.25;
+      if (hasML) passives.push({ type: '머신 러닝', value1: 0, value2: 0 });
       
       const galacticPassives: PassiveType[] = ['은하 팽창', '광속', 'Milky Way!'];
       const firstPassive = galacticPassives[Math.floor(Math.random() * galacticPassives.length)];
       passives.push({ type: firstPassive, value1: 0, value2: 0 });
+
+      if (!hasML && Math.random() < 0.3) {
+        let secondPassive = galacticPassives[Math.floor(Math.random() * galacticPassives.length)];
+        while (secondPassive === firstPassive) {
+          secondPassive = galacticPassives[Math.floor(Math.random() * galacticPassives.length)];
+        }
+        passives.push({ type: secondPassive, value1: 0, value2: 0 });
+      }
     }
 
     let availableStats: AmuletStat['type'][] = ['coin', 'speed', 'jackpotProb', 'jackpotPower'];
@@ -765,8 +788,8 @@ export function useGame() {
     setState(prev => ({ ...prev, amulet }));
   }, []);
 
-  const enchantAmulet = useCallback((tier: 1 | 2 | 3) => {
-    let success = false;
+  const enchantAmulet = useCallback((tier: 1 | 2 | 3): Amulet | null => {
+    let newAmulet: Amulet | null = null;
     setState(prev => {
       if (!prev.amulet) return prev;
       
@@ -804,7 +827,7 @@ export function useGame() {
         }
       }
 
-      const newAmulet = {
+      newAmulet = {
         ...prev.amulet,
         enchantment: {
           tier,
@@ -813,10 +836,9 @@ export function useGame() {
         }
       };
 
-      success = true;
-      return { ...prev, gems: prev.gems - cost, amulet: newAmulet };
+      return { ...prev, gems: prev.gems - cost };
     });
-    return success;
+    return newAmulet;
   }, []);
 
   const payCoins = useCallback((amount: number) => {
