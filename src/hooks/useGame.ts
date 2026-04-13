@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RARITIES, Rarity } from '@/src/constants/rarities';
-import { MOON_RARITIES } from '@/src/constants/moonRarities';
 
-export type AmuletType = 'Bronze' | 'Silver' | 'Gold' | 'Diamond' | 'Supreme' | 'GrandSupreme' | 'Galaxy' | 'Basic Ore' | 'Rare Ore' | 'Epic Ore' | 'Legendary Ore' | 'Mythical Ore';
-export type PassiveType = '잭팟 러시' | '코인 샤워' | '경험치 파워' | '머신 러닝' | '표준 편차' | '버닝 다이스' | '은하 팽창' | '광속' | '풍요';
+export type AmuletType = 'Bronze' | 'Silver' | 'Gold' | 'Diamond' | 'Supreme' | 'GrandSupreme' | 'Dimensional' | 'Galactic';
+export type PassiveType = '잭팟 러시' | '코인 샤워' | '행운의 파워' | '머신 러닝' | '표준 편차' | '버닝 다이스' | '은하 팽창' | '광속' | 'Milky Way!';
+export type EnchantPassiveType = '붉은 피의 저주' | '시간 여행' | '멀티 다이스' | '합성에 합성에 합성을 더해서' | '뽑기 기계' | '광속 팽창';
 
 export interface AmuletStat {
-  type: 'coin' | 'speed' | 'jackpotProb' | 'jackpotPower' | 'exp' | 'superJackpotProb' | 'superJackpotPower';
+  type: 'coin' | 'speed' | 'jackpotProb' | 'jackpotPower' | 'spaceCoin';
   value: number;
 }
 
@@ -16,16 +16,23 @@ export interface AmuletPassive {
   value2: number;
 }
 
+export interface Enchantment {
+  tier: 1 | 2 | 3;
+  statMultiplier: number;
+  passives: EnchantPassiveType[];
+}
+
 export interface Amulet {
   id: string;
   type: AmuletType;
   luckMultiplier: number;
   stats: AmuletStat[];
   passives: AmuletPassive[];
+  enchantment?: Enchantment;
 }
 
 export interface ActiveBuff {
-  type: PassiveType | '경험치 축복' | '버닝' | '재의 저주' | '광속';
+  type: PassiveType | '행운의 축복' | '버닝' | '재의 저주' | 'Sorry4DataReset';
   expiry: number;
   value1: number;
   value2: number;
@@ -36,6 +43,8 @@ export interface ActiveBuff {
 export interface GameState {
   rolls: number;
   coins: number;
+  spaceCoins: number;
+  gems: number;
   luck: number;
   inventory: Record<string, number>;
   bestRoll: string | null;
@@ -47,38 +56,32 @@ export interface GameState {
   quickPulseCount: number;
   jackpotProbLevel: number;
   jackpotPowerLevel: number;
+  spaceJackpotPowerLevel: number;
+  spaceCoinMultLevel: number;
+  spaceLuckLevel: number;
+  gemLuckLevel: number;
   synthesizerUnlocked: boolean;
-  lastRollStatus: { isJackpot: boolean; isSuperJackpot?: boolean } | null;
-  level: number;
-  exp: number;
+  enchantTableUnlocked: boolean;
+  lastRollStatus: { isJackpot: boolean, earnedCoins: number, earnedSpaceCoins: number, earnedGems: number } | null;
   amulet: Amulet | null;
   jackpotCount: number;
   rollCountForBuff: number;
   burningDiceCounter: number;
+  lightSpeedRollCount: number;
+  lightSpeedMultiplier: number;
   activeBuffs: ActiveBuff[];
   passiveCooldowns: Record<string, number>;
   stdDevMultiplier: number;
   autoRoll: boolean;
-  unlockedRegions: string[];
-  currentRegion: string;
-  spaceCoins: number;
-  spaceMaxLevelBonusLevel: number;
-  superJackpotProbLevel: number;
-  superJackpotPowerLevel: number;
-  moonInventory: Record<string, number>;
-  fragments: Record<string, number>;
-  pickaxeLevel: number;
-  processingLevel: number;
-  oreLuckLevel: number;
-  oreMaxLevelBonusLevel: number;
-  oreSuperJackpotProbLevel: number;
-  galaxyExpansionStacks: number;
-  lightSpeedRollCount: number;
+  redeemedCodes: string[];
+  betaUI: boolean;
 }
 
 const INITIAL_STATE: GameState = {
   rolls: 0,
   coins: 0,
+  spaceCoins: 0,
+  gems: 0,
   luck: 1,
   inventory: {},
   bestRoll: null,
@@ -90,48 +93,46 @@ const INITIAL_STATE: GameState = {
   quickPulseCount: 0,
   jackpotProbLevel: 0,
   jackpotPowerLevel: 0,
+  spaceJackpotPowerLevel: 0,
+  spaceCoinMultLevel: 0,
+  spaceLuckLevel: 0,
+  gemLuckLevel: 0,
   synthesizerUnlocked: false,
+  enchantTableUnlocked: false,
   lastRollStatus: null,
-  level: 1,
-  exp: 0,
   amulet: null,
   jackpotCount: 0,
   rollCountForBuff: 0,
   burningDiceCounter: 0,
+  lightSpeedRollCount: 0,
+  lightSpeedMultiplier: 1,
   activeBuffs: [],
   passiveCooldowns: {},
   stdDevMultiplier: 1,
   autoRoll: false,
-  unlockedRegions: ['Earth'],
-  currentRegion: 'Earth',
-  spaceCoins: 0,
-  spaceMaxLevelBonusLevel: 0,
-  superJackpotProbLevel: 0,
-  superJackpotPowerLevel: 0,
-  moonInventory: {},
-  fragments: {
-    'Basic fragment': 0,
-    'Rare fragment': 0,
-    'Epic fragment': 0,
-    'Legendary fragment': 0,
-    'Mythical fragment': 0
-  },
-  pickaxeLevel: 0,
-  processingLevel: 0,
-  oreLuckLevel: 0,
-  oreMaxLevelBonusLevel: 0,
-  oreSuperJackpotProbLevel: 0,
-  galaxyExpansionStacks: 0,
-  lightSpeedRollCount: 0,
+  redeemedCodes: [],
+  betaUI: false,
 };
 
-const BASE_COOLDOWN = 800; // 0.8 seconds
+const BASE_COOLDOWN = 1000; // 1.0 seconds
 export const QUICK_PULSE_PRICES = [10, 100, 1000, 10000, 100000];
 
 export function useGame() {
   const [state, setState] = useState<GameState>(() => {
-    const saved = localStorage.getItem('rng-game-state-v14');
-    if (saved) return JSON.parse(saved);
+    const saved = localStorage.getItem('rng-game-state-v15');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { 
+          ...INITIAL_STATE, 
+          ...parsed, 
+          activeBuffs: parsed.activeBuffs || [],
+          passiveCooldowns: parsed.passiveCooldowns || {},
+        };
+      } catch (e) {
+        return INITIAL_STATE;
+      }
+    }
     return INITIAL_STATE;
   });
 
@@ -142,7 +143,7 @@ export function useGame() {
   const isRollingRef = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem('rng-game-state-v14', JSON.stringify(state));
+    localStorage.setItem('rng-game-state-v15', JSON.stringify(state));
   }, [state]);
 
   // Calculate active amulet stats
@@ -151,9 +152,6 @@ export function useGame() {
   let amuletSpeed = 0;
   let amuletJackpotProb = 0;
   let amuletJackpotPower = 0;
-  let amuletSuperJackpotProb = 0;
-  let amuletSuperJackpotPower = 0;
-  let amuletExp = 1;
   let hasMachineLearning = false;
 
   if (state.amulet) {
@@ -163,9 +161,6 @@ export function useGame() {
       if (s.type === 'speed') amuletSpeed += s.value;
       if (s.type === 'jackpotProb') amuletJackpotProb += s.value;
       if (s.type === 'jackpotPower') amuletJackpotPower += s.value;
-      if (s.type === 'superJackpotProb') amuletSuperJackpotProb += s.value;
-      if (s.type === 'superJackpotPower') amuletSuperJackpotPower += s.value;
-      if (s.type === 'exp') amuletExp += s.value;
     });
     state.amulet.passives.forEach(p => {
       if (p.type === '머신 러닝') hasMachineLearning = true;
@@ -176,8 +171,7 @@ export function useGame() {
       if (p.type === '코인 샤워') {
         amuletCoin *= p.value1;
       }
-      if (p.type === '경험치 파워') {
-        amuletExp *= p.value1;
+      if (p.type === '행운의 파워') {
         amuletLuck *= p.value2;
       }
       if (p.type === '버닝 다이스') {
@@ -191,7 +185,6 @@ export function useGame() {
   let buffJackpotPower = 0;
   let buffCoinMult = 1;
   let buffSpeedRed = 0;
-  let buffExpMult = 1;
   let buffLuckMult = 1;
   let buffAuraAmount = 1;
 
@@ -205,12 +198,10 @@ export function useGame() {
         const scale = 1 + Math.log10(1 + (b.accumulated || 0)) * 0.5;
         buffCoinMult *= (1 + (b.value1 - 1) * scale);
         buffSpeedRed += b.value2 * scale;
-      } else if (b.type === '경험치 파워') {
+      } else if (b.type === '행운의 파워') {
         const scale = 1 + Math.log10(1 + (b.accumulated || 0)) * 0.2;
-        buffExpMult *= (1 + (b.value1 - 1) * scale);
         buffLuckMult *= (1 + (b.value2 - 1) * scale);
-      } else if (b.type === '경험치 축복') {
-        buffExpMult *= b.value1;
+      } else if (b.type === '행운의 축복') {
         buffLuckMult *= b.value2;
       } else if (b.type === '버닝') {
         const scale = 1 + (b.accumulated || 0) * 0.02;
@@ -219,14 +210,43 @@ export function useGame() {
       } else if (b.type === '재의 저주') {
         buffSpeedRed -= b.value1; // Negative speed reduction = slower
         buffAuraAmount = Math.max(buffAuraAmount, b.value2);
-      } else if (b.type === '광속') {
-        buffSpeedRed += b.value1;
+      } else if (b.type === 'Sorry4DataReset') {
+        buffLuckMult *= b.value1;
       }
     }
   });
 
-  const baseWithUpgrade = BASE_COOLDOWN - (state.quickPulseCount * 80);
-  const actualCooldown = baseWithUpgrade * Math.max(0.1, (1 - (amuletSpeed + buffSpeedRed)));
+  let baseWithUpgrade = BASE_COOLDOWN;
+  
+  if (state.quickPulseCount > 0) {
+    if (state.quickPulseCount <= 5) {
+      baseWithUpgrade *= Math.pow(0.8, state.quickPulseCount);
+    } else {
+      baseWithUpgrade *= Math.pow(0.8, 5) * Math.pow(0.9, state.quickPulseCount - 5);
+    }
+  }
+
+  let minCooldown = 200; // Default 0.2s
+  
+  if (state.amulet?.enchantment?.passives.includes('시간 여행')) {
+    if (state.rolls > 50000) minCooldown = 100;
+    else if (state.rolls > 20000) minCooldown = 120;
+    else if (state.rolls > 10000) minCooldown = 140;
+    else if (state.rolls > 5000) minCooldown = 160;
+    else if (state.rolls > 1000) minCooldown = 180;
+  }
+
+  if (state.amulet?.enchantment?.passives.includes('붉은 피의 저주')) {
+    minCooldown = Math.max(250, minCooldown + 50); // 0.25s base, if time travel exists it reduces from 0.25s? The prompt says "시간 여행이 있으면 0.02초씩 감소죠?". Let's just say minCooldown = 250 - (200 - minCooldown);
+    minCooldown = 250 - (200 - minCooldown);
+  }
+
+  let finalCooldownMult = Math.max(0.1, (1 - (amuletSpeed + buffSpeedRed))) * state.lightSpeedMultiplier;
+  if (state.activeBuffs.some(b => b.type === 'Sorry4DataReset' && b.expiry > Date.now())) {
+    finalCooldownMult *= 0.8;
+  }
+
+  const actualCooldown = Math.max(minCooldown, baseWithUpgrade * finalCooldownMult);
 
   // Cooldown timer & Buff expiry
   useEffect(() => {
@@ -262,7 +282,7 @@ export function useGame() {
     
     setTimeout(() => {
       const rollValue = Math.random();
-      const currentRarities = state.currentRegion === 'Moon' ? MOON_RARITIES : RARITIES;
+      const currentRarities = RARITIES;
       let selectedRarity = currentRarities[0];
 
       let newStdDev = state.stdDevMultiplier;
@@ -271,28 +291,18 @@ export function useGame() {
         else newStdDev *= 1.01;
       }
 
-      let galaxyExpansionMult = 1;
-      if (state.amulet?.passives.some(p => p.type === '은하 팽창')) {
-        galaxyExpansionMult = Math.pow(1.0005, state.galaxyExpansionStacks);
-      }
-
       // Base Jackpot: 1% prob, 200% (2.0) power
       const jackpotProb = Math.min(0.8, 0.01 + (state.jackpotProbLevel * 0.01) + amuletJackpotProb + buffJackpotProb);
       const isJackpot = Math.random() < jackpotProb;
-      const jackpotPower = Math.min(5.0, 2.0 + (state.jackpotPowerLevel * 0.1) + amuletJackpotPower + buffJackpotPower);
+      const jackpotPower = Math.min(8.0, 2.0 + (state.jackpotPowerLevel * 0.1) + (state.spaceJackpotPowerLevel * 0.2) + amuletJackpotPower + buffJackpotPower);
       
-      // Super Jackpot: 0.1% base prob, 300% (3.0) base power
-      const superJackpotProb = Math.min(0.25, 0.001 + (state.superJackpotProbLevel * 0.005) + amuletSuperJackpotProb + (state.oreSuperJackpotProbLevel * 0.005));
-      const isSuperJackpot = Math.random() < superJackpotProb;
-      const superJackpotPower = Math.min(5.0, 3.0 + (state.superJackpotPowerLevel * 0.2) + amuletSuperJackpotPower);
+      const spaceLuckBonus = 1 + (state.spaceLuckLevel * 0.2) + (state.gemLuckLevel * 0.5);
 
-      // Jackpot applies Jackpot Power / 2 as Luck Multiplier
-      let jackpotLuckBonus = isJackpot ? (jackpotPower / 2) : 1;
-      if (isSuperJackpot) {
-        jackpotLuckBonus *= (superJackpotPower / 2);
+      let totalLuck = state.luck * amuletLuck * buffLuckMult * newStdDev * spaceLuckBonus;
+
+      if (state.amulet?.enchantment?.passives.includes('광속 팽창') && state.amulet.passives.some(p => p.type === '광속') && state.amulet.passives.some(p => p.type === '은하 팽창')) {
+        totalLuck *= 1.005;
       }
-      
-      const totalLuck = state.luck * amuletLuck * buffLuckMult * newStdDev * jackpotLuckBonus * galaxyExpansionMult;
 
       for (let i = currentRarities.length - 1; i >= 0; i--) {
         const rarity = currentRarities[i];
@@ -304,8 +314,8 @@ export function useGame() {
         }
       }
       
-      let coinMultiplier = isJackpot ? jackpotPower : 1;
-      if (isSuperJackpot) coinMultiplier *= superJackpotPower;
+      let coinMultiplier = 1;
+      if (isJackpot) coinMultiplier = jackpotPower;
 
       const selectedIndex = currentRarities.findIndex(r => r.name === selectedRarity.name);
       let trueBaseProb = 0;
@@ -338,16 +348,30 @@ export function useGame() {
 
       setState(prev => {
         const newInventory = { ...prev.inventory };
-        const newMoonInventory = { ...prev.moonInventory };
-        const amountToGive = Math.floor(buffAuraAmount);
+        let amountToGive = Math.floor(buffAuraAmount);
         
-        if (prev.currentRegion === 'Moon') {
-          newMoonInventory[selectedRarity.name] = (newMoonInventory[selectedRarity.name] || 0) + amountToGive;
-        } else {
-          newInventory[selectedRarity.name] = (newInventory[selectedRarity.name] || 0) + amountToGive;
+        if (prev.amulet?.enchantment?.passives.includes('멀티 다이스')) {
+          if (Math.random() < 0.2) {
+            amountToGive += 1;
+            if (Math.random() < 0.1) {
+              amountToGive += 1;
+              if (Math.random() < 0.05) {
+                amountToGive += 1;
+                if (Math.random() < 0.01) {
+                  amountToGive += 1;
+                }
+              }
+            }
+          }
         }
 
-        const currentRarities = prev.currentRegion === 'Moon' ? MOON_RARITIES : RARITIES;
+        if (prev.amulet?.passives.some(p => p.type === '버닝 다이스') && Math.random() < 0.5) {
+          amountToGive *= 2;
+        }
+        
+        newInventory[selectedRarity.name] = (newInventory[selectedRarity.name] || 0) + amountToGive;
+
+        const currentRarities = RARITIES;
         const currentBestIndex = currentRarities.findIndex(r => r.name === prev.bestRoll);
         const newRollIndex = currentRarities.findIndex(r => r.name === selectedRarity.name);
         
@@ -358,23 +382,19 @@ export function useGame() {
         if (prev.amulet?.passives.some(p => p.type === '풍요')) {
           abundanceMult = 2;
         }
-
-        const baseExp = Math.max(10, Math.floor(selectedRarity.coinValue / 5));
-        const expGain = baseExp * amuletExp * buffExpMult * abundanceMult;
         
-        let earnedCoins = 0;
-        let earnedSpaceCoins = 0;
-        if (prev.currentRegion === 'Moon') {
-          earnedSpaceCoins = Math.floor(selectedRarity.coinValue * coinMultiplier * amuletCoin * buffCoinMult * abundanceMult);
-        } else {
-          earnedCoins = Math.floor(selectedRarity.coinValue * coinMultiplier * amuletCoin * buffCoinMult * abundanceMult);
-        }
+        let earnedCoins = Math.floor(selectedRarity.coinValue * coinMultiplier * amuletCoin * buffCoinMult * abundanceMult * (1 + prev.spaceCoinMultLevel * 0.2));
+        let earnedSpaceCoins = selectedRarity.spaceCoinValue ? Math.floor(selectedRarity.spaceCoinValue * coinMultiplier * amuletCoin * buffCoinMult * abundanceMult * (1 + prev.spaceCoinMultLevel * 0.2)) : 0;
+        let earnedGems = selectedRarity.gemValue ? selectedRarity.gemValue * amountToGive : 0;
 
         let newJackpotCount = prev.jackpotCount;
         let newRollCount = prev.rollCountForBuff + 1;
         let newBurningCounter = prev.burningDiceCounter + 1;
-        let newGalaxyExpansionStacks = prev.galaxyExpansionStacks + 1;
         let newLightSpeedRollCount = prev.lightSpeedRollCount + 1;
+        let newLightSpeedMultiplier = prev.lightSpeedMultiplier;
+        let newLuck = prev.luck;
+        let newCoins = prev.coins;
+        let newSpaceCoins = prev.spaceCoins;
         const newBuffs = [...prev.activeBuffs];
         const newCooldowns = { ...prev.passiveCooldowns };
 
@@ -382,72 +402,56 @@ export function useGame() {
           newJackpotCount++;
         }
 
-        if (prev.amulet?.passives.some(p => p.type === '버닝 다이스') && Math.random() < 0.5) {
-          buffAuraAmount *= 2;
+        if (prev.amulet?.enchantment?.passives.includes('뽑기 기계')) {
+          newCoins = Math.floor(newCoins * 0.995);
+          newSpaceCoins = Math.floor(newSpaceCoins * 0.995);
         }
 
-        if (prev.amulet?.passives.some(p => p.type === '광속') && newLightSpeedRollCount >= 100) {
-          if (!newCooldowns['광속'] || newCooldowns['광속'] <= Date.now()) {
-            newBuffs.push({ type: '광속', expiry: Date.now() + 10000, value1: 0.5, value2: 0 });
-            newCooldowns['광속'] = Date.now() + 20000;
-            newLightSpeedRollCount = 0;
+        if (prev.amulet?.enchantment?.passives.includes('붉은 피의 저주')) {
+          if (['Mythic', 'Universal', 'Omniscient', 'Absolute'].includes(selectedRarity.name)) {
+            newLuck *= 1.005;
           }
         }
 
-        let newExp = prev.exp;
-        let newLevel = prev.level;
+        if (prev.amulet?.passives.some(p => p.type === '은하 팽창')) {
+          newLuck *= 1.0005;
+        }
         
-        const actualMaxLevel = 100 + prev.spaceMaxLevelBonusLevel * 10 + prev.oreMaxLevelBonusLevel * 10;
-
-        {
-          newExp += expGain;
-          let expReq = 100 * newLevel;
-          while (newExp >= expReq && newLevel < actualMaxLevel) {
-            newExp -= expReq;
-            newLevel++;
-            expReq = 100 * newLevel;
-          }
-          if (newLevel >= actualMaxLevel) {
-            newLevel = actualMaxLevel;
-            newExp = 0;
-          }
+        if (prev.amulet?.passives.some(p => p.type === 'Milky Way!') && Math.random() < 0.314) {
+          newLuck *= 1.00314;
         }
 
-        const newUnlockedRegions = [...prev.unlockedRegions];
-        if (selectedRarity.name === 'Galactic' && !newUnlockedRegions.includes('Moon')) {
-          newUnlockedRegions.push('Moon');
-        }
-        if (selectedRarity.name === 'Uranium' && prev.currentRegion === 'Moon' && !newUnlockedRegions.includes('Underworld')) {
-          newUnlockedRegions.push('Underworld');
+        if (prev.amulet?.passives.some(p => p.type === '광속')) {
+          if (newLightSpeedRollCount % 10 === 0) {
+            newLightSpeedMultiplier *= 0.998;
+          }
         }
 
         return {
           ...prev,
           rolls: prev.rolls + 1,
-          coins: prev.coins + earnedCoins,
-          spaceCoins: prev.spaceCoins + earnedSpaceCoins,
+          coins: newCoins + earnedCoins,
+          spaceCoins: newSpaceCoins + earnedSpaceCoins,
+          gems: prev.gems + earnedGems,
+          luck: newLuck,
           inventory: newInventory,
-          moonInventory: newMoonInventory,
           bestRoll: !prev.bestRoll || newRollIndex > currentBestIndex ? selectedRarity.name : prev.bestRoll,
           rarestAura: newRarestAura || currentRarities[0].name,
           lastRollTime: Date.now(),
           rollHistory: [selectedRarity.name, ...prev.rollHistory].slice(0, 8),
-          lastRollStatus: { isJackpot, isSuperJackpot },
-          level: newLevel,
-          exp: newExp,
+          lastRollStatus: { isJackpot, earnedCoins, earnedSpaceCoins, earnedGems },
           jackpotCount: newJackpotCount,
           rollCountForBuff: newRollCount,
           burningDiceCounter: newBurningCounter,
-          galaxyExpansionStacks: newGalaxyExpansionStacks,
           lightSpeedRollCount: newLightSpeedRollCount,
+          lightSpeedMultiplier: newLightSpeedMultiplier,
           activeBuffs: newBuffs,
           passiveCooldowns: newCooldowns,
           stdDevMultiplier: newStdDev,
-          unlockedRegions: newUnlockedRegions
         };
       });
     }, 10);
-  }, [state.luck, state.lastRollTime, actualCooldown, state.jackpotProbLevel, state.jackpotPowerLevel, amuletLuck, amuletCoin, amuletJackpotProb, amuletJackpotPower, amuletExp, buffJackpotProb, buffJackpotPower, buffCoinMult, buffExpMult, buffLuckMult, buffAuraAmount, state.stdDevMultiplier, state.amulet, state.currentRegion]);
+  }, [state.luck, state.lastRollTime, actualCooldown, state.jackpotProbLevel, state.jackpotPowerLevel, amuletLuck, amuletCoin, amuletJackpotProb, amuletJackpotPower, buffJackpotProb, buffJackpotPower, buffCoinMult, buffLuckMult, buffAuraAmount, state.stdDevMultiplier, state.amulet]);
 
   // Auto Roll Loop
   const rollRef = useRef(roll);
@@ -486,7 +490,7 @@ export function useGame() {
   const resetGame = useCallback(() => {
     if (window.confirm('정말로 모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
       setState(INITIAL_STATE);
-      localStorage.removeItem('rng-game-state-v14');
+      localStorage.removeItem('rng-game-state-v15');
       window.location.reload();
     }
   }, []);
@@ -495,82 +499,147 @@ export function useGame() {
     setState(prev => ({ ...prev, equippedAura: auraName }));
   }, []);
 
-  const synthesize = useCallback((rarityIndex: number, max: boolean = false, isMoon: boolean = false) => {
-    const currentRarities = isMoon ? MOON_RARITIES : RARITIES;
+  const synthesize = useCallback((rarityIndex: number, max: boolean = false) => {
+    const currentRarities = RARITIES;
     if (rarityIndex >= currentRarities.length - 1) return false;
     const currentRarity = currentRarities[rarityIndex];
     const nextRarity = currentRarities[rarityIndex + 1];
     
     let success = false;
     setState(prev => {
-      const inventoryKey = isMoon ? 'moonInventory' : 'inventory';
+      if (nextRarity.name === 'Aleph-0' && (prev.inventory['Infinite'] || 0) === 0) return prev;
+      
+      const inventoryKey = 'inventory';
       const count = prev[inventoryKey][currentRarity.name] || 0;
       if (count >= 5) {
-        const crafts = max ? Math.floor(count / 5) : 1;
+        let crafts = max ? Math.floor(count / 5) : 1;
         const newInventory = { ...prev[inventoryKey] };
         newInventory[currentRarity.name] -= crafts * 5;
-        newInventory[nextRarity.name] = (newInventory[nextRarity.name] || 0) + crafts;
+
+        let multiplier = 1;
+        if (prev.amulet?.enchantment?.passives.includes('합성에 합성에 합성을 더해서') && nextRarity.name !== 'Infinite') {
+          // Reduce chance closer to Infinity
+          const distanceToInfinity = currentRarities.length - 1 - rarityIndex;
+          const chanceMult = Math.max(0.1, distanceToInfinity / 10);
+          
+          if (Math.random() < 0.1 * chanceMult) multiplier = 3;
+          else if (Math.random() < 0.4 * chanceMult) multiplier = 2;
+        }
+
+        newInventory[nextRarity.name] = (newInventory[nextRarity.name] || 0) + (crafts * multiplier);
         success = true;
-        return { ...prev, [inventoryKey]: newInventory };
+        return { ...prev, [inventoryKey]: newInventory, equippedAura: nextRarity.name };
       }
       return prev;
     });
     return success;
   }, []);
 
-  const buyUpgrade = useCallback((cost: number, type: 'luck' | 'cooldown' | 'jackpotProb' | 'jackpotPower' | 'synthesizer', value: number, count: number = 1) => {
-    if (state.coins >= cost) {
-      setState(prev => {
+  const buyUpgrade = useCallback((cost: number, type: 'luck' | 'cooldown' | 'jackpotProb' | 'jackpotPower' | 'synthesizer' | 'spaceJackpotPower' | 'spaceCoinMult' | 'spaceLuck' | 'gemLuck' | 'enchantTable', value: number, count: number = 1, currency: 'coins' | 'spaceCoins' | 'gems' = 'coins') => {
+    let success = false;
+    setState(prev => {
+      if (currency === 'coins' && prev.coins >= cost) {
+        const newState = { ...prev };
+        newState.coins -= cost;
+
         if (type === 'luck') {
-          const maxLevel = prev.level * 500;
+          const maxLevel = 1000000;
           if (prev.luckyCloverCount >= maxLevel) return prev;
           const actualCount = Math.min(count, maxLevel - prev.luckyCloverCount);
           const actualValue = (value / count) * actualCount;
-          return { ...prev, coins: prev.coins - cost, luck: prev.luck + actualValue, luckyCloverCount: prev.luckyCloverCount + actualCount };
+          newState.luck += actualValue;
+          newState.luckyCloverCount += actualCount;
         } else if (type === 'cooldown') {
-          if (prev.quickPulseCount >= 5) return prev;
-          return { ...prev, coins: prev.coins - cost, quickPulseCount: prev.quickPulseCount + 1 };
+          if (prev.quickPulseCount >= 10) return prev;
+          newState.quickPulseCount += 1;
         } else if (type === 'jackpotProb') {
-          if (prev.jackpotProbLevel >= 79) return prev; // 1% base + 79% upgrade = 80%
-          return { ...prev, coins: prev.coins - cost, jackpotProbLevel: prev.jackpotProbLevel + count };
+          if (prev.jackpotProbLevel >= 80) return prev;
+          newState.jackpotProbLevel += count;
         } else if (type === 'jackpotPower') {
-          if (prev.jackpotPowerLevel >= 30) return prev; // 200% base + 300% upgrade = 500%
-          return { ...prev, coins: prev.coins - cost, jackpotPowerLevel: prev.jackpotPowerLevel + count };
+          if (prev.jackpotPowerLevel >= 30) return prev;
+          newState.jackpotPowerLevel += count;
         } else if (type === 'synthesizer') {
-          return { ...prev, coins: prev.coins - cost, synthesizerUnlocked: true };
+          newState.synthesizerUnlocked = true;
         }
-        return prev;
-      });
-      return true;
-    }
-    return false;
-  }, [state.coins]);
-
-  const buySpaceUpgrade = useCallback((cost: number, type: 'maxLevel' | 'superJackpotProb' | 'superJackpotPower', count: number = 1) => {
-    if (state.spaceCoins >= cost) {
-      setState(prev => {
-        if (type === 'maxLevel') {
-          if (prev.spaceMaxLevelBonusLevel >= 100) return prev;
-          return { ...prev, spaceCoins: prev.spaceCoins - cost, spaceMaxLevelBonusLevel: prev.spaceMaxLevelBonusLevel + count };
-        } else if (type === 'superJackpotProb') {
-          if (prev.superJackpotProbLevel >= 40) return prev; // 40 * 0.5% = 20%
-          return { ...prev, spaceCoins: prev.spaceCoins - cost, superJackpotProbLevel: prev.superJackpotProbLevel + count };
-        } else if (type === 'superJackpotPower') {
-          if (prev.superJackpotPowerLevel >= 10) return prev; // 10 * 20% = 200%
-          return { ...prev, spaceCoins: prev.spaceCoins - cost, superJackpotPowerLevel: prev.superJackpotPowerLevel + count };
+        success = true;
+        return newState;
+      } else if (currency === 'spaceCoins' && prev.spaceCoins >= cost) {
+        const newState = { ...prev };
+        newState.spaceCoins -= cost;
+        if (type === 'spaceJackpotPower') {
+          if (prev.spaceJackpotPowerLevel >= 15) return prev;
+          newState.spaceJackpotPowerLevel += count;
+        } else if (type === 'spaceCoinMult') {
+          const maxLevel = 25;
+          if (prev.spaceCoinMultLevel >= maxLevel) return prev;
+          const actualCount = Math.min(count, maxLevel - prev.spaceCoinMultLevel);
+          newState.spaceCoinMultLevel += actualCount;
+        } else if (type === 'spaceLuck') {
+          const maxLevel = 50000;
+          if (prev.spaceLuckLevel >= maxLevel) return prev;
+          const actualCount = Math.min(count, maxLevel - prev.spaceLuckLevel);
+          newState.spaceLuckLevel += actualCount;
         }
-        return prev;
-      });
-      return true;
-    }
-    return false;
-  }, [state.spaceCoins]);
+        success = true;
+        return newState;
+      } else if (currency === 'gems' && prev.gems >= cost) {
+        const newState = { ...prev };
+        newState.gems -= cost;
+        if (type === 'gemLuck') {
+          const maxLevel = 50000;
+          if (prev.gemLuckLevel >= maxLevel) return prev;
+          const actualCount = Math.min(count, maxLevel - prev.gemLuckLevel);
+          newState.gemLuckLevel += actualCount;
+        } else if (type === 'enchantTable') {
+          newState.enchantTableUnlocked = true;
+        }
+        success = true;
+        return newState;
+      }
+      return prev;
+    });
+    return success;
+  }, []);
 
-  const changeRegion = useCallback((region: string) => {
-    if (state.unlockedRegions.includes(region)) {
-      setState(prev => ({ ...prev, currentRegion: region }));
-    }
-  }, [state.unlockedRegions]);
+  const redeemCode = useCallback((code: string) => {
+    let success = false;
+    let message = '';
+    setState(prev => {
+      if (prev.redeemedCodes.includes(code)) {
+        message = '이미 사용된 코드입니다.';
+        return prev;
+      }
+
+      const newState = { ...prev, redeemedCodes: [...prev.redeemedCodes, code] };
+      
+      if (code === 'Sorry4DataReset') {
+        newState.activeBuffs.push({
+          type: 'Sorry4DataReset',
+          expiry: Date.now() + 3 * 60 * 60 * 1000, // 3 hours
+          value1: 1.5, // luck mult
+          value2: 0.8 // cooldown mult
+        });
+        message = '보상 버프가 지급되었습니다! (3시간)';
+        success = true;
+      } else if (code === 'PressStart!') {
+        newState.coins += 1000;
+        message = '1000 코인이 지급되었습니다!';
+        success = true;
+      } else if (code === 'DevONLY') {
+        newState.coins += 100000000000000;
+        newState.spaceCoins += 100000000000000;
+        newState.gems += 100000000000000;
+        message = '개발자 보상이 지급되었습니다!';
+        success = true;
+      } else {
+        message = '유효하지 않은 코드입니다.';
+        return prev;
+      }
+      
+      return newState;
+    });
+    return { success, message };
+  }, []);
 
   const generateAmulet = useCallback((type: AmuletType): Amulet => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -607,16 +676,17 @@ export function useGame() {
       luckMultiplier = 2.5;
       numStats = Math.random() < 0.7 ? 3 : 4;
       
-      const passivePool: PassiveType[] = ['잭팟 러시', '코인 샤워', '경험치 파워', '머신 러닝', '표준 편차', '버닝 다이스'];
+      const passivePool: PassiveType[] = ['잭팟 러시', '코인 샤워', '행운의 파워', '머신 러닝', '표준 편차', '버닝 다이스'];
       
       const getPassive = (pType: PassiveType): AmuletPassive => {
         switch(pType) {
           case '잭팟 러시': return { type: pType, value1: 0.05, value2: 0.5 };
           case '코인 샤워': return { type: pType, value1: 1.5, value2: 0 };
-          case '경험치 파워': return { type: pType, value1: 2, value2: 1.2 };
+          case '행운의 파워': return { type: pType, value1: 2, value2: 1.2 };
           case '머신 러닝': return { type: pType, value1: 0, value2: 0 };
           case '표준 편차': return { type: pType, value1: 0, value2: 0 };
           case '버닝 다이스': return { type: pType, value1: 0.1, value2: 2 };
+          default: return { type: pType, value1: 0, value2: 0 };
         }
       };
 
@@ -630,73 +700,59 @@ export function useGame() {
         }
         passives.push(getPassive(secondPassive));
       }
-    } else if (type === 'Galaxy') {
+    } else if (type === 'Dimensional') {
       luckMultiplier = 3.0;
       numStats = 4;
-      passives.push({ type: '머신 러닝', value1: 0, value2: 0 });
-      const galaxyPassives: PassiveType[] = ['은하 팽창', '광속', '풍요'];
-      const randomPassive = galaxyPassives[Math.floor(Math.random() * galaxyPassives.length)];
-      passives.push({ type: randomPassive, value1: 0, value2: 0 });
+      if (Math.random() < 0.2) passives.push({ type: '머신 러닝', value1: 0, value2: 0 });
       
-      const availableStats: AmuletStat['type'][] = ['coin', 'speed', 'jackpotProb', 'jackpotPower', 'superJackpotProb', 'superJackpotPower'];
-      const pickedStats = availableStats.sort(() => 0.5 - Math.random()).slice(0, numStats);
-      const stats: AmuletStat[] = pickedStats.map(statType => {
-        let value = 0;
-        switch (statType) {
-          case 'coin': value = 1.1 + Math.random() * 0.1; break;
-          case 'speed': value = 0.05 + Math.random() * 0.07; break;
-          case 'jackpotProb': value = 0.05 + Math.random() * 0.07; break;
-          case 'jackpotPower': value = 0.40 + Math.random() * 0.45; break;
-          case 'superJackpotProb': value = 0.02 + Math.random() * 0.02; break;
-          case 'superJackpotPower': value = 0.25 + Math.random() * 0.45; break;
-          case 'exp': value = 0; break;
-        }
-        return { type: statType, value };
-      });
-      return { id, type, luckMultiplier, stats, passives };
-    } else if (type === 'Basic Ore') {
-      luckMultiplier = 1.5;
-      numStats = 2;
-    } else if (type === 'Rare Ore') {
-      luckMultiplier = 2.0;
-      numStats = 3;
-    } else if (type === 'Epic Ore') {
-      luckMultiplier = 2.5;
-      numStats = 3;
-      passives.push({ type: '경험치 파워', value1: 2, value2: 0 });
-    } else if (type === 'Legendary Ore') {
-      luckMultiplier = 3.0;
+      const dimensionalPassives: PassiveType[] = ['은하 팽창', '광속'];
+      const firstPassive = dimensionalPassives[Math.floor(Math.random() * dimensionalPassives.length)];
+      passives.push({ type: firstPassive, value1: 0, value2: 0 });
+    } else if (type === 'Galactic') {
+      luckMultiplier = 3.5;
       numStats = 4;
-      passives.push({ type: '잭팟 러시', value1: 0.1, value2: 1.0 });
-    } else if (type === 'Mythical Ore') {
-      luckMultiplier = 4.0;
-      numStats = 4;
-      passives.push({ type: '머신 러닝', value1: 0, value2: 0 });
-      passives.push({ type: '풍요', value1: 0, value2: 0 });
+      if (Math.random() < 0.25) passives.push({ type: '머신 러닝', value1: 0, value2: 0 });
+      
+      const galacticPassives: PassiveType[] = ['은하 팽창', '광속', 'Milky Way!'];
+      const firstPassive = galacticPassives[Math.floor(Math.random() * galacticPassives.length)];
+      passives.push({ type: firstPassive, value1: 0, value2: 0 });
     }
 
-    const availableStats: AmuletStat['type'][] = ['coin', 'speed', 'jackpotProb', 'jackpotPower', 'exp'];
+    let availableStats: AmuletStat['type'][] = ['coin', 'speed', 'jackpotProb', 'jackpotPower'];
+    if (type === 'Dimensional' || type === 'Galactic') {
+      availableStats.push('spaceCoin');
+    }
     const pickedStats = availableStats.sort(() => 0.5 - Math.random()).slice(0, numStats);
 
     const stats: AmuletStat[] = pickedStats.map(statType => {
       let value = 0;
       switch (statType) {
-        case 'coin': value = 1.05 + Math.random() * 0.10; break;
+        case 'coin': 
+          if (type === 'Dimensional') value = 1.1 + Math.random() * 0.1;
+          else if (type === 'Galactic') value = 1.1 + Math.random() * 0.15;
+          else value = 1.05 + Math.random() * 0.10; 
+          break;
         case 'speed': 
-          if (type === 'Supreme') value = 0.03 + Math.random() * 0.09;
+          if (type === 'Dimensional') value = 0.05 + Math.random() * 0.07;
+          else if (type === 'Galactic') value = 0.07 + Math.random() * 0.05;
+          else if (type === 'Supreme') value = 0.03 + Math.random() * 0.09;
           else value = 0.03 + Math.random() * 0.07;
           break;
         case 'jackpotProb': 
-          if (type === 'Supreme') value = 0.01 + Math.random() * 0.06;
+          if (type === 'Dimensional') value = 0.05 + Math.random() * 0.10;
+          else if (type === 'Galactic') value = 0.08 + Math.random() * 0.07;
+          else if (type === 'Supreme') value = 0.01 + Math.random() * 0.06;
           else value = 0.01 + Math.random() * 0.04;
           break;
         case 'jackpotPower': 
-          if (type === 'Supreme') value = 0.05 + Math.random() * 0.15;
+          if (type === 'Dimensional') value = 0.40 + Math.random() * 0.45;
+          else if (type === 'Galactic') value = 0.45 + Math.random() * 0.55;
+          else if (type === 'Supreme') value = 0.05 + Math.random() * 0.15;
           else value = 0.05 + Math.random() * 0.10;
           break;
-        case 'exp': 
-          if (type === 'Supreme') value = 0.15 + Math.random() * 0.55;
-          else value = 0.15 + Math.random() * 0.35;
+        case 'spaceCoin':
+          if (type === 'Dimensional') value = 1.08 + Math.random() * 0.07;
+          else if (type === 'Galactic') value = 1.08 + Math.random() * 0.07;
           break;
       }
       return { type: statType, value };
@@ -707,6 +763,60 @@ export function useGame() {
 
   const setAmulet = useCallback((amulet: Amulet | null) => {
     setState(prev => ({ ...prev, amulet }));
+  }, []);
+
+  const enchantAmulet = useCallback((tier: 1 | 2 | 3) => {
+    let success = false;
+    setState(prev => {
+      if (!prev.amulet) return prev;
+      
+      let cost = 0;
+      if (tier === 1) cost = 10;
+      else if (tier === 2) cost = 50;
+      else if (tier === 3) cost = 200;
+
+      if (prev.gems < cost) return prev;
+
+      let statMultiplier = 1;
+      if (tier === 1) statMultiplier = 1.05 + Math.random() * 0.05;
+      else if (tier === 2) statMultiplier = 1.1 + Math.random() * 0.15;
+      else if (tier === 3) statMultiplier = 1.2 + Math.random() * 0.1;
+
+      let passives: EnchantPassiveType[] = [];
+      const passivePool: EnchantPassiveType[] = ['붉은 피의 저주', '시간 여행', '멀티 다이스', '합성에 합성에 합성을 더해서', '뽑기 기계'];
+      
+      // Secret passive check
+      if (prev.amulet.passives.some(p => p.type === '광속') && prev.amulet.passives.some(p => p.type === '은하 팽창')) {
+        if (Math.random() < 0.02) {
+          passives.push('광속 팽창');
+        }
+      }
+
+      if (tier === 2 && Math.random() < 0.05 && passives.length < 1) {
+        passives.push(passivePool[Math.floor(Math.random() * passivePool.length)]);
+      } else if (tier === 3) {
+        if (Math.random() < 0.25 && passives.length < 2) {
+          passives.push(passivePool[Math.floor(Math.random() * passivePool.length)]);
+        }
+        if (Math.random() < 0.25 && passives.length < 2) {
+          const p = passivePool[Math.floor(Math.random() * passivePool.length)];
+          if (!passives.includes(p)) passives.push(p);
+        }
+      }
+
+      const newAmulet = {
+        ...prev.amulet,
+        enchantment: {
+          tier,
+          statMultiplier,
+          passives
+        }
+      };
+
+      success = true;
+      return { ...prev, gems: prev.gems - cost, amulet: newAmulet };
+    });
+    return success;
   }, []);
 
   const payCoins = useCallback((amount: number) => {
@@ -721,58 +831,6 @@ export function useGame() {
     return success;
   }, []);
 
-  const paySpaceCoins = useCallback((amount: number) => {
-    let success = false;
-    setState(prev => {
-      if (prev.spaceCoins >= amount) {
-        success = true;
-        return { ...prev, spaceCoins: prev.spaceCoins - amount };
-      }
-      return prev;
-    });
-    return success;
-  }, []);
-
-  const addFragments = useCallback((newFragments: Record<string, number>) => {
-    setState(prev => {
-      const updatedFragments = { ...prev.fragments };
-      for (const [type, count] of Object.entries(newFragments)) {
-        updatedFragments[type] = (updatedFragments[type] || 0) + count;
-      }
-      return { ...prev, fragments: updatedFragments };
-    });
-  }, []);
-
-  const buyOreUpgrade = useCallback((cost: number, fragmentType: string, type: 'pickaxe' | 'processing' | 'oreLuck' | 'oreMaxLevel' | 'oreSuperJackpotProb', count: number = 1) => {
-    setState(prev => {
-      const currentFragments = prev.fragments[fragmentType] || 0;
-      if (currentFragments >= cost) {
-        const newFragments = { ...prev.fragments };
-        newFragments[fragmentType] -= cost;
-
-        if (type === 'pickaxe') {
-          if (count > 0 && prev.pickaxeLevel >= 20) return prev; // +50% per level, max +1000% (20 levels)
-          return { ...prev, fragments: newFragments, pickaxeLevel: prev.pickaxeLevel + count };
-        } else if (type === 'processing') {
-          if (count > 0 && prev.processingLevel >= 12) return prev; // -5% per level, max -60% (12 levels)
-          return { ...prev, fragments: newFragments, processingLevel: prev.processingLevel + count };
-        } else if (type === 'oreLuck') {
-          const maxLevel = prev.level * 100;
-          if (count > 0 && prev.oreLuckLevel >= maxLevel) return prev;
-          const actualCount = count > 0 ? Math.min(count, maxLevel - prev.oreLuckLevel) : 0;
-          return { ...prev, fragments: newFragments, oreLuckLevel: prev.oreLuckLevel + actualCount };
-        } else if (type === 'oreMaxLevel') {
-          if (count > 0 && prev.oreMaxLevelBonusLevel >= 10) return prev; // +10 per level, max +100 (10 levels)
-          return { ...prev, fragments: newFragments, oreMaxLevelBonusLevel: prev.oreMaxLevelBonusLevel + count };
-        } else if (type === 'oreSuperJackpotProb') {
-          if (count > 0 && prev.oreSuperJackpotProbLevel >= 40) return prev; // +0.5% per level, max +20% (40 levels)
-          return { ...prev, fragments: newFragments, oreSuperJackpotProbLevel: prev.oreSuperJackpotProbLevel + count };
-        }
-      }
-      return prev;
-    });
-  }, []);
-
   return {
     state,
     currentRoll,
@@ -781,35 +839,29 @@ export function useGame() {
     actualCooldown,
     roll,
     buyUpgrade,
-    buySpaceUpgrade,
-    changeRegion,
     equipAura,
     synthesize,
     generateAmulet,
+    enchantAmulet,
+    redeemCode,
     setAmulet,
     payCoins,
-    paySpaceCoins,
-    addFragments,
-    buyOreUpgrade,
     toggleAutoRoll,
     resetGame,
     hasMachineLearning,
+    setState,
     amuletStats: {
       luck: amuletLuck,
       coin: amuletCoin,
       speed: amuletSpeed,
       jackpotProb: amuletJackpotProb,
-      jackpotPower: amuletJackpotPower,
-      superJackpotProb: amuletSuperJackpotProb,
-      superJackpotPower: amuletSuperJackpotPower,
-      exp: amuletExp
+      jackpotPower: amuletJackpotPower
     },
     buffStats: {
       jackpotProb: buffJackpotProb,
       jackpotPower: buffJackpotPower,
       coinMult: buffCoinMult,
       speedRed: buffSpeedRed,
-      expMult: buffExpMult,
       luckMult: buffLuckMult,
       auraAmount: buffAuraAmount
     }
