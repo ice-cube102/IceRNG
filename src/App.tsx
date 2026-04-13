@@ -816,6 +816,17 @@ export default function App() {
                           </h3>
                         </div>
 
+                        {state.gemMultLevel < 5 && (
+                          <ShopItem 
+                            name="보석 배수 증가" 
+                            desc={`+20% 보석 획득량 (현재: +${state.gemMultLevel * 20}%, 최대 +100%)`}
+                            cost={[10, 20, 50, 100, 500][state.gemMultLevel]} 
+                            icon={<Gem className="w-4 h-4 text-fuchsia-400" />}
+                            onBuy={() => handleUpgrade([10, 20, 50, 100, 500][state.gemMultLevel], 'gemMult', 0.2, "보석 배수 증가", 1, 'gems')}
+                            currency="gems"
+                          />
+                        )}
+
                         {!state.enchantTableUnlocked && (
                           <ShopItem 
                             name="인챈트 테이블 해금" 
@@ -1109,7 +1120,7 @@ export default function App() {
                         {RARITIES.slice(0, -1).map((rarity, idx) => {
                           const count = state.inventory[rarity.name] || 0;
                           const nextRarity = RARITIES[idx + 1];
-                          if (nextRarity.name === 'Aleph-0' && (state.inventory['Infinite'] || 0) === 0) return null;
+                          if (nextRarity.name === 'Aleph-0' && (state.inventory['Infinite'] || 0) < 314) return null;
                           
                           return (
                             <div key={rarity.name} className={`flex flex-col gap-2 p-4 rounded-2xl border ${count === 0 ? 'bg-slate-950/40 border-slate-900' : 'bg-slate-900/40 border-slate-800/50'}`}>
